@@ -1,0 +1,30 @@
+---
+# Limit which branches semantic-release will operate against.
+branches:
+  - master
+
+tagFormat: "${version}"
+
+plugins:
+  - &ch "@semantic-release/changelog"
+  - &gitlab "@semantic-release/gitlab"
+  - &git "@semantic-release/git"
+  - "@semantic-release/commit-analyzer"
+  - "@semantic-release/release-notes-generator"
+  - - "@semantic-release/exec"
+    - verifyReleaseCmd: "echo ${nextRelease.version} > .next_release"
+
+verifyConditions:
+  - *gitlab
+  - *git
+  - *ch
+
+prepare:
+  - *ch
+  - path: *git
+    message: "docs(release): ${nextRelease.version}\n\n${nextRelease.notes}"
+    assets:
+      - "CHANGELOG.md"
+
+publish:
+  - *gitlab

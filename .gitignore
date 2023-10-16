@@ -1,0 +1,6 @@
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+ ansible/roles/aws_s3/files/s3-policies.yml
