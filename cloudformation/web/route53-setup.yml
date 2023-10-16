@@ -1,0 +1,30 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create a Cloudfront Distribution DNS record set"
+Parameters:
+  Domain:
+    Type: String
+    Default: theinsuranceapplication.com
+  DomainName:
+    Type: String
+    Default: ""
+    Description: "full domain name: subdomain.example.com"
+  CloudFrontDistributionDNS:
+    Type: String
+    Default: d35hgz41wtkrhh.cloudfront.net
+  CloudFrontDistributionZoneID:
+    Type: String
+    Description: All cloudfront Distributions use the same zone which is set as a default here. Non-cloudfront target will need to override this var
+    Default: Z2FDTNDATAQYW2
+
+
+Resources:
+  CloudfrontDNS:
+    Type: 'AWS::Route53::RecordSet'
+    Properties:
+      AliasTarget:
+        DNSName: !Ref CloudFrontDistributionDNS
+        HostedZoneId: !Ref CloudFrontDistributionZoneID
+      HostedZoneName: !Sub ["${Dom}.", {Dom: !Ref Domain}]
+      Name: !Ref DomainName
+      Type: A

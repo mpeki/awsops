@@ -1,0 +1,165 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create a cloudfront distribution"
+Parameters:
+  Customer:
+    Type: String
+    Default: ""
+  Environment:
+    Type: String
+    Default: ""
+  EnvironmentName:
+    Type: String
+    Default: rnddev
+    Description: Environment name as outlined in https://docs.tiatechnology.com/display/ARC/Digital+and+Designer+Environments used to find correct sites path
+    AllowedValues: [ "dev", "demo", "m1", "sbhdemo", "sbhtest", "rnddev","lkdv", "lkdev", "sbhsit", "sbhdv", "sbhuat", "sbhpreprod", "sbhprod", "lkqa", "lktest", "lkmigtest", "lkuat"]
+  Domain:
+    Type: String
+    Default: ""
+  SubDomain:
+    Type: String
+    Default: ""
+  ProjectName:
+    Type: String
+    Description: "Name of project frontend is for: cjd, commumications-designer"
+    AllowedValues: ["cjd", "com", "brd", "spd"]
+  CertificateArn:
+    Type: String
+Mappings:
+  EnvironmentSitePathMap:
+      dev:
+         cjd: /
+         brd: /sites/trd
+         com: /sites/communications-designer
+      demo:
+        cjd: /sites/demo
+        brd: /sites/trd
+        com: /sites/communications-designer
+      m1:
+        cjd: /sites/m1
+        brd: /sites/trd
+        com: /sites/communications-designer
+      sbhdemo:
+        cjd: /sites/sbhdemo
+        brd: /sites/trd
+        com: /sites/communications-designer
+      sbhtest:
+        cjd: /sites/sbhtest
+        brd: /sites/trd
+        com: /sites/communications-designer
+      rnddev:
+        cjd: /sites/rnddev
+        brd: /sites/trd
+        com: /sites/communications-designer
+        spd: /sites/spd
+      lkdv:
+        cjd: /sites/cjd
+        brd: /sites/brd
+        spd: /sites/spd
+      lkdev:
+        cjd: /sites/lkdev
+        brd: /sites/trd
+        com: /sites/communications-designer
+      sbhsit:
+        cjd: /sites/cjd
+        brd: /sites/trd
+        com: /sites/communications-designer
+        spd: /sites/spd
+      sbhdv:
+        cjd: /sites/cjd
+        brd: /sites/brd
+        com: /sites/com
+        spd: /sites/spd
+      sbhuat:
+        cjd: /sites/cjd
+        brd: /sites/brd
+        com: /sites/com
+        spd: /sites/spd
+      sbhpreprod:
+        cjd: /sites/cjd
+        brd: /sites/brd
+        com: /sites/com
+        spd: /sites/spd
+      sbhprod:
+        cjd: /sites/cjd
+        brd: /sites/brd
+        com: /sites/com
+        spd: /sites/spd
+      lkqa:
+        cjd: /sites/cjd
+        brd: /sites/brd
+        spd: /sites/spd
+      lktest:
+        cjd: /sites/cjd
+        brd: /sites/brd
+        spd: /sites/spd
+      lkmigtest:
+        cjd: /sites/cjd
+        brd: /sites/brd
+        spd: /sites/spd
+      lkuat:
+        cjd: /sites/cjd
+        brd: /sites/brd
+        spd: /sites/spd
+
+Resources:
+  CloudFrontDistributionStack:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Join [ ".", [!Ref SubDomain, !Ref Domain]]
+        CustomErrorResponses:
+          - ErrorCachingMinTTL: 300
+            ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: "/index.html"
+          - ErrorCachingMinTTL: 300
+            ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: "/index.html"
+        DefaultCacheBehavior:
+          ForwardedValues:
+              QueryString: false
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          Compress: false
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+          MinTTL: 0
+          SmoothStreaming: false
+          TargetOriginId: !Sub ["S3-${BucketName}${Sites}", { BucketName: !Sub ["cussp-${Env}", {Env: !Ref EnvironmentName} ], Sites: !FindInMap [ EnvironmentSitePathMap, !Ref EnvironmentName, !Ref ProjectName] }]
+          ViewerProtocolPolicy: "redirect-to-https"
+        DefaultRootObject: "index.html"
+        Enabled: true
+        IPV6Enabled: true
+        Origins:
+          - DomainName: !Sub ["${BucketName}.s3.amazonaws.com", { BucketName: !Sub ["cussp-${Env}", {Env: !Ref EnvironmentName} ]}]
+            Id: !Sub ["S3-${BucketName}${Sites}", {BucketName: !Sub ["cussp-${Env}", {Env: !Ref EnvironmentName} ], Sites: !FindInMap [ EnvironmentSitePathMap, !Ref EnvironmentName, !Ref ProjectName] }]
+            OriginPath: !FindInMap [ EnvironmentSitePathMap, !Ref EnvironmentName, !Ref ProjectName]
+            S3OriginConfig:
+             OriginAccessIdentity: ""
+        PriceClass: PriceClass_All
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: sni-only
+      Tags:
+        - Key: cust_name
+          Value: !Ref Customer
+        - Key: env_name
+          Value: !Ref Environment
+
+Outputs:
+  CloudFrontDistributionDomainName:
+    Description: Id of distribution for referencing in Route53
+    Value: !GetAtt CloudFrontDistributionStack.DomainName
+    Export:
+      Name: !Sub ["${AWS::StackName}-DomainName", {Project: !Ref ProjectName }]
+
+  CloudfrontDistributionId:
+    Description: Id of distribution
+    Value: !Ref CloudFrontDistributionStack
+    Export:
+      Name: !Sub ["${AWS::StackName}-CloudfrontID", {Project: !Ref ProjectName }]

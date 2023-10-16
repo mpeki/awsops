@@ -1,0 +1,23 @@
+---
+Parameters:
+  RouteTableIds:
+    Type: CommaDelimitedList
+    Description: list of route table ids to add vpce route to
+  VpcID:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC id to add vpc endpoint to access s3
+
+Resources:
+  S3Endpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: '*'
+            Resource: '*'
+      RouteTableIds: !Ref RouteTableIds
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcId: !Ref VpcID

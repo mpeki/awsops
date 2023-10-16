@@ -1,0 +1,27 @@
+---
+# defaults file for aws_rds
+stack_state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+
+# Path to cloudformation definition file.
+rds_template_dir: "../../cloudformation/database"
+
+# Stack name for load balancer
+rds_stack_name: "CuSSP-RDS-{{ db_name }}"
+
+rds_template_filename: rds-setup.yml
+rds_replica_template_filename: create-read-replica.yml
+dr_role_region: eu-north-1
+
+# Cloudformation template_parameter values:
+rds_db_name: "{{ db_name|lower }}"
+rds_network_stack: CuSSP-network
+rds_database_allocated_storage: "20"
+rds_database_instance_type: db.t3.micro
+rds_database_engine_type: mysql
+rds_database_version: "8.0.19"
+rds_db_user: "{{ rds_db_name|lower| regex_replace('[-_0-9]+') }}" # See note in README.md
+rds_db_password: "!{{ rds_db_user }}!" # This convention is used across all resources.
+rds_db_parameter_group_stack: CuSSP-RDS-parametergroup
+rds_db_subnet_stack: CuSSP-RDS-subnet
+rds_environment: dev
+rds_service_name: "{{ rds_db_name|lower }}"

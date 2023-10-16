@@ -1,0 +1,41 @@
+---
+# tasks file for aws_ecr
+# 1 read vars from _vault
+# 2 create string
+# 3 pass to cf template.
+- name: Get sts admin token
+  include_role:
+    name: aws_sts_login
+  vars:
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].secret_access_key }}"
+    assume_role_arn: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].role_name].role_arn }}"
+    assume_role_session_name: "ansible-{{ mode }}-{{ role_name }}"
+  no_log: "{{ showlogs|bool | ternary(false,true)}}"
+
+- name: "set username"
+  set_fact:
+    secret_object: {
+      username: "{{ artifactory_username }}",
+      password: "{{ artifactory_password }}"
+    }
+  no_log: "{{ showlogs|bool | ternary(false,true)}}"
+
+- name: create cloudformation secret
+  cloudformation:
+    stack_name: "{{ stack_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ script_dir }}/secret-setup.yml"
+    capabilities:
+    - CAPABILITY_IAM
+    template_parameters:
+      MySecretString: "{{ secret_object  | to_json | string }}"
+      SecretId: "{{ secret_id }}"
+      RoleName: "{{ cust_name[0]|upper }}{{ cust_name[1:] }}{{ env_name[0]|upper }}{{ env_name[1:] }}Ops"
+      TaskExecutionRoleName: "{{ task_execution_role }}"
+  no_log: "{{ showlogs|bool | ternary(false,true)}}"
+

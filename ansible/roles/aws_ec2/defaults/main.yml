@@ -1,0 +1,14 @@
+---
+# defaults file for aws_ec2
+stack_state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+
+# location of cloudformation scripts
+script_dir: "../../cloudformation/compute"
+# set our stack name as a variable
+stack_name: CuSSP-ecs-auto-scaling-group
+# Stack name of our network setup
+network_stack_name: CuSSP-network
+# Stack name of our intranet setup
+intranet_stack_name: CuSSP-intranet
+# Cluster name
+ecs_cluster_name: cuspp-ecs-cluster

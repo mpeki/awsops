@@ -1,0 +1,216 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Application LoadBalancers for microservices - one internet facing and one internal"
+
+Parameters:
+  NetworkStack:
+    Type: "String"
+    Description: "Network stack to apply to."
+
+  ElbName:
+    Type: String
+    Description: "Name for this ELB"
+
+  LogBucketName:
+    Type: String
+    Description: "Name for bucket used for access-logs"
+
+Conditions:
+  UseLogging: !Not [!Equals [!Ref LogBucketName, '']]
+
+Resources:
+
+  # create an Internet facing APPLICATION load balancer for use by containers in our  microservices ECS cluster
+  AlbForMicroservices:
+    # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Ref ElbName
+      Scheme: internet-facing
+      Subnets:
+          # add the 3 DMZ (public) subnets for access to the internet
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetDmzAId
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetDmzBId
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetDmzCId
+      LoadBalancerAttributes:
+        !If
+        - UseLogging
+        - - Key: access_logs.s3.enabled
+            Value: 'true'
+          - Key: access_logs.s3.bucket
+            Value: !Ref LogBucketName
+          - Key: access_logs.s3.prefix
+            Value: !Ref ElbName
+          - Key: idle_timeout.timeout_seconds
+            Value: '30'
+        - - Key: idle_timeout.timeout_seconds
+            Value: '30'
+      SecurityGroups:
+        - Ref: AlbForMicroservicesSecurityGroup
+      Tags:
+        - Key: Purpose
+          Value: microservices
+
+  # create an Internal APPLICATION load balancer for use by containers in our  microservices ECS cluster
+  InternalAlbForMicroservices:
+    # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Join ['-', [!Ref ElbName, 'internal']]
+      Scheme: internal
+      Subnets:
+          # add the 3 Nodes (private) subnets for internal access
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetNodesAId
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetNodesBId
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetNodesCId
+
+      LoadBalancerAttributes:
+        !If
+        - UseLogging
+        - - Key: access_logs.s3.enabled
+            Value: 'true'
+          - Key: access_logs.s3.bucket
+            Value: !Ref LogBucketName
+          - Key: access_logs.s3.prefix
+            Value: !Join ['-', [!Ref ElbName, 'internal']]
+          - Key: idle_timeout.timeout_seconds
+            Value: '30'
+        - - Key: idle_timeout.timeout_seconds
+            Value: '30'
+      SecurityGroups:
+        - Ref: AlbForMicroservicesSecurityGroup
+      Tags:
+        - Key: Purpose
+          Value: Internal microservices
+
+  # create a Security Group specifically for our ECS cluster
+  AlbForMicroservicesSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Ref "AWS::StackName"
+      GroupDescription: !Ref "AWS::StackName"
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcId
+
+  # Allow outbound traffic
+  AlbForMicroservicesSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref AlbForMicroservicesSecurityGroup
+      CidrIp: 0.0.0.0/0
+      IpProtocol: "-1" # allow all traffic outbound
+
+  # allow Load balancer to receive HTTP
+  AlbForMicroservicesSecurityGroupIngressAllowHTTP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AlbForMicroservicesSecurityGroup
+      CidrIp: 0.0.0.0/0
+      IpProtocol: "tcp"
+      FromPort: 80
+      ToPort: 80
+
+  # allow Load balancer to receive HTTPS
+  AlbForMicroservicesSecurityGroupIngressAllowHTTPS:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AlbForMicroservicesSecurityGroup
+      CidrIp: 0.0.0.0/0
+      IpProtocol: "tcp"
+      FromPort: 443
+      ToPort: 443
+
+  # Register Load Balancer as a known DNS alias entry in the private hosted zone
+  AlbDNS:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: AlbForMicroservices
+    Properties:
+      HostedZoneName:
+        !Join
+          - ''
+          - - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+            - '.'
+      Comment: Zone apex alias targeted to the LoadBalancer.
+      RecordSets:
+      - Name:
+          !Join
+            - ''
+            - - Fn::GetAtt: [AlbForMicroservices, LoadBalancerName]
+              - '.'
+              - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+              - '.'
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt AlbForMicroservices.CanonicalHostedZoneID
+          DNSName:
+            !GetAtt AlbForMicroservices.DNSName
+
+  # Register Internal Load Balancer as a known DNS alias entry in the private hosted zone
+  InternalAlbDNS:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: InternalAlbForMicroservices
+    Properties:
+      HostedZoneName:
+        !Join
+          - ''
+          - - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+            - '.'
+      Comment: Zone apex alias targeted to the Internal LoadBalancer.
+      RecordSets:
+      - Name:
+          !Join
+            - ''
+            - - Fn::GetAtt: [InternalAlbForMicroservices, LoadBalancerName]
+              - '.'
+              - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+              - '.'
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt InternalAlbForMicroservices.CanonicalHostedZoneID
+          DNSName:
+            !GetAtt InternalAlbForMicroservices.DNSName
+
+  ListenerForAlbForMicroservices:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            StatusCode: HTTP_301
+      LoadBalancerArn: !Ref AlbForMicroservices
+      Port: 80
+      Protocol: HTTP
+      
+  ListenerForInternalAlbForMicroservices:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            ContentType: text/plain
+            StatusCode: 503
+      LoadBalancerArn: !Ref InternalAlbForMicroservices
+      Port: 80
+      Protocol: HTTP
+
+Outputs:
+  ListenerForInternalAlbMicroservicesID:
+    Description: "ID for internal load balancer listener"
+    Value: !Ref ListenerForInternalAlbForMicroservices
+    Export:
+      Name: !Sub ${AWS::StackName}-ListenerForInternalAlbMicroservices
+  
+  ListenerForAlbForMicroservicesID:
+    Description: "ID for internet load balancer listener"
+    Value: !Ref ListenerForAlbForMicroservices
+    Export:
+      Name: !Sub ${AWS::StackName}-ListenerForAlbForMicroservices

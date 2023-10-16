@@ -1,0 +1,37 @@
+---
+- name: Assume role
+  include_role: 
+    name: aws_sts_login
+  vars:
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].secret_access_key }}"
+    assume_role_session_name: "ansible-{{ mode }}-{{ role_name }}"
+    assume_role_arn: "{{ aws_credentials_vault[route53_account_role_name].role_arn }}"
+
+- name: "{{ mode }} route53 record - {{cust_name }}{{ env_name }}"
+  cloudformation:
+    stack_name: "{{ r53_prefix_stack_name }}-{{ project_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+
+- name: Assume role
+  include_role: 
+    name: aws_sts_login
+  vars:
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].secret_access_key }}"
+    assume_role_session_name: "ansible-{{ mode }}-{{ role_name }}"
+    assume_role_arn: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].role_name].role_arn }}"
+
+- name: "{{ mode }} cloudfront distribution - {{cust_name }}{{ env_name }}"
+  cloudformation:
+    stack_name: "{{ cf_prefix_stack_name }}-{{ project_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+

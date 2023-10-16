@@ -1,0 +1,11 @@
+---
+# tasks file for aws_s3
+# delete does not remove the policy. it can only be updated
+- name: Update s3 policies on admin account
+  include_tasks: update_policy_admin_account.yml
+
+- name: "{{ mode }} config-server git access"
+  include_tasks: "{{ mode|lower }}_config_access.yml"
+
+- name: "{{ mode }} cussp bucket in aws cust-env account"
+  include_tasks: cussp_bucket.yml

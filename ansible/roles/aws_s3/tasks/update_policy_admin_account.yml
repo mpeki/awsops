@@ -1,0 +1,32 @@
+---
+- name: Get sts admin token
+  include_role:
+    name: aws_sts_login
+  vars:
+    admin: true
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].tia_admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].tia_admin_role_name].secret_access_key }}"
+
+- name: Template s3 access policy
+  template:
+    src: s3-policies.yml.j2
+    dest: "{{ role_path }}/files/s3-policies.yml"
+  delegate_to: localhost
+
+- name: Adding the policy for s3 access
+  cloudformation:
+    stack_name: "{{ admin_buckets_policy_stack_name }}"
+    state: present
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ role_path }}/files/s3-policies.yml"
+    template_parameters:
+      BucketName: "{{ admin_bucket_name }}"
+      BucketStack: "{{ admin_buckets_stack_name }}"
+
+- name: clean policies file
+  file:
+    path: "{{ role_path }}/files/s3-policies.yml"
+    state: absent

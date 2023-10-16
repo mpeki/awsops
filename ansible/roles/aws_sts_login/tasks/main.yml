@@ -1,0 +1,29 @@
+---
+# tasks file for aws_sts_login
+- name: Get admin sts token
+  sts_session_token:
+    aws_access_key: "{{ admin_access_key }}"
+    aws_secret_key: "{{ admin_secret_access_key }}"
+    region: "{{ role_region }}"
+    duration_seconds: "{{ token_ttl_seconds | default('1800') }}"
+  register: admin_token
+  changed_when: false
+  no_log: "{{ showlogs|bool | ternary(false,true)}}"
+
+- name: Assume sts role
+  sts_assume_role:
+    role_arn: "{{ assume_role_arn }}"
+    role_session_name: "{{ assume_role_session_name | default('sts-login-assume-role') }}"
+    aws_access_key: "{{ admin_token.sts_creds.access_key }}"
+    aws_secret_key: "{{ admin_token.sts_creds.secret_key }}"
+    security_token: "{{ admin_token.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+  register: assumed_token
+  changed_when: false
+  when: not admin|bool
+  no_log: "{{ showlogs|bool | ternary(false,true)}}"
+
+- name: Set assumed_role sts credentials
+  set_fact:
+    assumed_role: "{{ admin|bool | ternary(admin_token,assumed_token) }}"
+  no_log: "{{ showlogs|bool | ternary(false,true)}}"

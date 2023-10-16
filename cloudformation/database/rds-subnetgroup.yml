@@ -1,0 +1,94 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "RDS subnet/security -group for Microservice"
+
+Parameters:
+  NetworkStack:
+    Type: String
+    Description: "Network stack to apply to."
+
+  IntranetStack:
+    Type: String
+    Description: "Intranet stack to apply to."
+
+Resources:
+  MicroserviceDbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnets for Microservice DBs"
+      SubnetIds:
+        - Fn::ImportValue:                    # IMPORT a value we exported from another stack
+            !Sub ${NetworkStack}-SubnetDbAId  # SUB-stitute the NetworkStack parameter to derive the export name
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetDbBId
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetDbCId
+      Tags:
+        - Key: Scope
+          Value: private
+        - Key: Purpose
+          Value: db
+
+  MicroserviceVPCSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Ref "AWS::StackName"
+      GroupDescription: !Ref "AWS::StackName"
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcId
+
+  MicroServiceVPCSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "-1" # allow all traffic outbound
+
+  MicroServiceVPCSecurityGroupEgressIntranet:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+      IpProtocol: "-1" # allow all traffic outbound
+
+  # allow DB to receive connections
+  MicroServiceVPCSecurityGroupIngressAllowMySQL:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "tcp"
+      FromPort: 3306
+      ToPort: 3306
+
+  MicroServiceVPCSecurityGroupIngressAllowIntranet:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+      IpProtocol: "tcp"
+      FromPort: 3306
+      ToPort: 3306
+
+
+Outputs:
+  DbSubnetGroup:
+      Description : "Db Subnet Group"
+      Value:  !Ref MicroserviceDbSubnetGroup
+      Export:
+        Name: !Sub ${AWS::StackName}-DbSubnetGroup
+
+  VPCSecurityGroup:
+      Description : "VPC Security Group"
+      Value:  !Ref MicroserviceVPCSecurityGroup
+      Export:
+        Name: !Sub ${AWS::StackName}-VPCSecurityGroup

@@ -1,0 +1,71 @@
+---
+# Variables specific to RND
+cust_config:
+  rnd:
+    sandbox:
+      account: sandbox
+      number: 094422079219
+      elasticsearch:
+        enforce_ssl: true
+        use_encryption: true
+        node_to_node_encryption: true
+      aws_network:
+        customer_ipv4_address: 83.221.154.221
+        vpc_cidr_prefix: 10.40.0
+        dest_cidr_block: 192.168.0.0/20
+        dns_domain: theinsuranceapplication.com
+        dns_subdomain:
+          cjd: sandbox-cjd
+          brd: sandbox-trd
+          spd: sandbox-spd
+          com: sandbox-com
+      aws_profile:
+        role_name: sandboxops
+        admin_role_name: admin
+        tia_admin_role_name: admin
+        region: eu-central-1
+        amq_username: admin
+        amq_password: !vault |
+          $ANSIBLE_VAULT;1.2;AES256;aws_vault
+          30373837643065616239396466616435643264643531326431343864616563336432666666323039
+          3234333732613536656134356361643765626566336436330a376161653565393030643462666433
+          30393737306462306563376632353965306339313439343933353664336336376639373662636437
+          6239323163663338650a393837386263656332336533326430353132373766306337613130396361
+          39343639363735393161643865303534643833346364653361623464613534653961
+    dev:
+      account: rnddev
+      number: 515257242789
+      rds_create_read_replica: true
+      aws_network:
+        customer_ipv4_address: 83.221.154.221
+        vpc_cidr_prefix: 10.44.56
+        dest_cidr_block: 192.168.0.0/20
+        route_53_enabled: true
+        dns_domain: theinsuranceapplication.com
+        dns_subdomain:
+          cjd: rnddev-cjd
+          brd: rnddev-brd
+          spd: rnddev-spd
+          com: rnddev-com
+      aws_profile:
+        role_name: rnddevops
+        admin_role_name: admin
+        tia_admin_role_name: admin
+        region: eu-central-1
+        amq_username: admin
+        amq_password: !vault |
+          $ANSIBLE_VAULT;1.2;AES256;aws_vault
+          65653836633462333264343832373362326436656433663334356632643739643830653631386234
+          3665626666326664303736376437643863326363616633620a626636633235343636303338663465
+          37623830633661643936346166363361613761353336653032333737633438313166646336393734
+          3132663166616635350a386365326533373431303630373935623361643931326263343066356462
+          36323536613535303366303362393032623734313366313437303830643264353036
+    all:
+      spd_bis:
+        spd_bis_version: '1.7.0'
+        salespolicy_uuid_columnname: "c102"
+        location: '/bis'
+        sipas_url: "placeholder"
+        port: 9025
+      oci:
+        cust_parent_compartment_id: "ocid1.compartment.oc1..aaaaaaaadqxe3qicos4wibjprzf5brwrgspnts3d5wln4n5qpihydy5jii5a"

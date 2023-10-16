@@ -1,0 +1,8 @@
+---
+# defaults file for aws_s3
+stack_state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+
+script_dir: "../../cloudformation/storage"
+admin_buckets_stack_name:  CuSSP-s3-buckets
+admin_buckets_policy_stack_name: "{{ admin_buckets_stack_name }}-policies"
+admin_bucket_name: cussp

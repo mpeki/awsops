@@ -1,0 +1,44 @@
+---
+
+# Install aws-cli if needed
+- name: aws-cli
+  import_tasks: awscli_setup.yml
+  tags: policy
+
+- name: Get policies for cloudwatch
+  command: >
+    /tmp/awscli/aws logs
+    --region "{{ role_region }}"
+    describe-resource-policies
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ assumed_role.sts_creds.access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
+    AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
+  register: policies
+  changed_when: false
+
+- name: Check if policy exists
+  set_fact:
+    policy_installed: "{{ (policies.stdout|from_json)['resourcePolicies'] | selectattr('policyName', 'equalto', 'AmazonMQ-Logs') | list | length > 0 }}"
+  changed_when: false
+
+- name: Create policy for cloudwatch
+  command: >
+    /tmp/awscli/aws logs --region "{{ role_region }}" put-resource-policy
+    --policy-name AmazonMQ-Logs
+    --policy-document '{ "Version": "2012-10-17", "Statement": [ { "Effect": "Allow", "Principal": { "Service": "mq.amazonaws.com" }, "Action": [ "logs:PutLogEvents", "logs:CreateLogStream" ], "Resource": "arn:aws:logs:*:*:log-group:/aws/amazonmq/*" } ] }'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ assumed_role.sts_creds.access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
+    AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
+  when: not policy_installed  and (mode|lower )== 'create'
+
+- name: Delete policy for cloudwatch
+  command: >
+    /tmp/awscli/aws logs --region "{{ role_region }}" delete-resource-policy
+    --policy-name AmazonMQ-Logs
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ assumed_role.sts_creds.access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
+    AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
+  when: policy_installed and (mode|lower) == 'delete'

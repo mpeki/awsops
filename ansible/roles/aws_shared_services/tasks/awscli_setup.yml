@@ -1,0 +1,29 @@
+---
+- name: Check for awscliv2
+  stat:
+    path: /tmp/awscli/aws
+  register: cli
+  changed_when: false
+
+- name: Install aws-cli
+  block: 
+  # - name: download aws-cli
+  #   command: curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+
+  - name: Download aws-cli
+    get_url:
+      url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+      dest: /tmp/awscliv2.zip
+
+  - name: Unzip into /tmp/
+    unarchive:
+      src: /tmp/awscliv2.zip
+      dest: /tmp
+
+  - name: Install aws-cli
+    command: >
+      /tmp/aws/install
+      -i /tmp/awscli
+      -b /tmp/awscli
+      --update
+  when: not cli.stat.exists

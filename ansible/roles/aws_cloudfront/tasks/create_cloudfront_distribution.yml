@@ -1,0 +1,87 @@
+---
+- name: Assume role
+  include_role:
+    name: aws_sts_login
+  vars:
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].secret_access_key }}"
+    assume_role_session_name: "ansible-{{ mode }}-{{ role_name }}"
+    assume_role_arn: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].role_name].role_arn }}"
+
+# The assumption is that a certificate exists in the account and either contains the full
+# domain of the distribution or a wildcard certificate *.domain
+- name: Create a list of domains to search the certificate SubjectAlternativeNames for
+  set_fact:
+      domains:
+      - "{{dns_subdomain }}.{{ dns_domain }}"
+      - "*.{{ dns_domain }}"
+
+# there should always 1 or 0 matches
+- name: Obtain certificate information from ACM filtering for ISSUED or PENDING_VALIDATION status.
+  aws_acm_facts:
+    statuses:
+      - ISSUED
+      - PENDING_VALIDATION
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ aws_certificate_region }}"
+  register: acm_result
+  no_log: "{{ showlogs|default(false)|bool | ternary(false,true)}}"
+
+# Using JSMEPath plugin to parse the result and set the certificate arn
+- name: Set certificate arn
+  set_fact:
+    cert_arn: "{{ item }}"
+  loop: "{{  acm_result | to_json | from_json | json_query(query)}}"
+  vars:
+    query: "certificates[?subject_alternative_names[?contains(`[ '{{ domains[0] }}', '{{ domains[1] }}' ]`, @)]].certificate_arn"
+
+- name: Fail if no certificate found
+  fail:
+    msg: "No certificate found for {{ dns_subdomain }} in {{ cust_environment_name }}"
+  when: cert_arn is not defined
+
+- name: "{{ mode }} cloudfront distribution - {{cust_name }}{{ env_name }}"
+  cloudformation:
+    stack_name: "{{ cf_prefix_stack_name }}-{{ project_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ script_dir }}/cloudfront-setup.yml"
+    template_parameters:
+      Customer: "{{ cust_name }}"
+      Environment: "{{ env_name }}"
+      EnvironmentName: "{{ cust_environment_name }}"
+      Domain: "{{ dns_domain }}"
+      ProjectName: "{{ project_name }}"
+      CertificateArn: "{{ cert_arn }}"
+      SubDomain: "{{ dns_subdomain }}"
+  register: cloudfront_stack
+
+
+- name: Assume role
+  include_role:
+    name: aws_sts_login
+  vars:
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].secret_access_key }}"
+    assume_role_session_name: "ansible-{{ mode }}-{{ role_name }}"
+    assume_role_arn: "{{ aws_credentials_vault[route53_account_role_name].role_arn }}"
+
+- name: "{{ mode }} route53 record - {{cust_name }}{{ env_name }}"
+  cloudformation:
+    stack_name: "{{ r53_prefix_stack_name }}-{{ project_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ script_dir }}/route53-setup.yml"
+    template_parameters:
+      CloudFrontDistributionDNS: "{{ cloudfront_stack.stack_outputs.CloudFrontDistributionDomainName }}"
+      DomainName: "{{ domains | first }}"
+      Domain: "{{ dns_domain }}"
+  when: route_53_enabled|default(false)|bool == true

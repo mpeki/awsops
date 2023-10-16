@@ -1,0 +1,169 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Group and Users"
+
+Resources:
+  DevelopersGroup: # create a GROUP for our developers
+    Type: "AWS::IAM::Group"
+    Properties:
+      GroupName: "Developers"
+
+  DevOpsGroup: # create a GROUP for our DevOps - including Jenkins
+    Type: "AWS::IAM::Group"
+    Properties:
+      GroupName: "DevOps"
+
+  TestersGroup: # create a GROUP for our developers
+    Type: "AWS::IAM::Group"
+    Properties:
+      GroupName: "Testers"
+
+  DevOpsAccessPolicy: # grant limited access to EC2 Container Registry and S3 buckets
+    Type: "AWS::IAM::ManagedPolicy"
+    DependsOn: DevOpsGroup
+    Properties:
+      ManagedPolicyName: "DevOpsAccessPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "iam:ListRoles"
+              - "iam:PassRole"
+              - "s3:CreateBucket"
+              - "s3:GetBucketPolicy"
+              - "s3:GetObject"
+              - "s3:ListAllMyBuckets"
+              - "s3:ListBucket"
+              - "s3:PutBucketPolicy"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+              - "sts:AssumeRole"
+            Resource: "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
+      Groups:
+        - DevOps
+
+  EC2LimitedAccessPolicy: # grant limited access to EC2
+    Type: "AWS::IAM::ManagedPolicy"
+    DependsOn: [DevelopersGroup, TestersGroup]
+    Properties:
+      ManagedPolicyName: "EC2LimitedAccess"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+            # allow developers to launch, start, and stop instances
+          - Effect: "Allow"
+            Action:
+              - "ec2:RunInstances"
+              - "ec2:StartInstances"
+              - "ec2:StopInstances"
+            Resource: "*"
+            Condition:
+              StringEquals:
+                ec2:InstanceType:
+                  - "t2.micro"
+                  - "t2.small"
+                  - "t2.medium"
+
+            # allow developers to manage THEIR OWN access keys and password
+          - Effect: "Allow"
+            Action:
+              - "iam:*MFADevice*"
+              - "iam:*LoginProfile"
+              - "iam:*AccessKey*"
+              - "iam:ChangePassword"
+              - "iam:ListUsers"
+            Resource:
+              Fn::Join: [":", ["arn:aws:iam:", !Ref "AWS::AccountId", "user/${aws:username}"]]
+
+          - Effect: "Allow"
+            Action:
+              - "iam:ListVirtualMFADevices"
+            Resource:
+              Fn::Join: [":", ["arn:aws:iam:", !Ref "AWS::AccountId", "mfa/"]]
+          - Effect: "Allow"
+            Action:
+              - "iam:*VirtualMFADevice"
+            Resource:
+              Fn::Join: [":", ["arn:aws:iam:", !Ref "AWS::AccountId", "mfa/${aws:username}"]]
+          - Effect: "Allow"
+            Action:
+              - "iam:ListAccount*"
+              - "iam:GetAccountSummary"
+              - "iam:GetAccountPasswordPolicy"
+              - "iam:ListUsers"
+            Resource: "*"
+      Groups:
+        - Developers
+        - Testers
+
+  userMarcPekilidi:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "msp"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - Developers
+
+  userMartinPalmus:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "mpa"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - Developers
+
+  userVeselinIvanov:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "viv"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - Developers
+
+  userPetrasPetrauskas:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "ppet"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - Developers
+
+  userVaidotasLeksius:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "vle"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - Developers
+
+  userSimonGroenborg:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "sgo"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - Developers
+
+  userRemigijusPielikis:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "rpi"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - Testers

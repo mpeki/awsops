@@ -1,0 +1,9 @@
+---
+  - name: Delete config-server git ssh key
+    aws_s3:
+      aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+      aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+      security_token: "{{ assumed_role.sts_creds.session_token }}"
+      bucket: cussp-configs
+      object: "/{{ cust_config[cust_name][env_name].account }}/access/config-server/id_rsa"
+      mode: delobj

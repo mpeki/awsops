@@ -1,0 +1,42 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Manage Secrets in an instance of SSM"
+
+Parameters:
+  RoleName:
+    Type: String
+    Description: friendly name of role to add permissions to.
+
+Resources:
+  AllowIAMPermissionsOps:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: IAM ROLES FOR OPS
+      Path: /
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: IAMpermissionsOpsUser
+          Effect: Allow
+          Action:
+          - iam:CreateInstanceProfile
+          - iam:DeleteInstanceProfile
+          - iam:RemoveRoleFromInstanceProfile
+          - iam:CreateRole
+          - iam:DeleteRole
+          - iam:AttachRolePolicy
+          - iam:PutRolePolicy
+          - iam:AddRoleToInstanceProfile
+          - iam:CreatePolicy
+          - iam:PassRole
+          - iam:DetachRolePolicy
+          - iam:DeleteRolePolicy
+          - iam:PutGroupPolicy
+          - iam:DeletePolicy
+          Resource:
+          - !Sub "arn:aws:iam::${AWS::AccountId}:group/logs"
+          - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+          - !Sub "arn:aws:iam::${AWS::AccountId}:policy/*"
+          - !Sub "arn:aws:iam::${AWS::AccountId}:instance-profile/*"
+      Roles:
+        - !Ref RoleName

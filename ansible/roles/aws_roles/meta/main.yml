@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: devops@tiatechnology.com
+  description: Manages roles for fargate, ec2, ecs.
+  company: TIA
+
+  platforms:
+    - name: Oracle Linux
+      versions:
+        - 7
+
+  license: BSD
+
+  min_ansible_version: 2.7

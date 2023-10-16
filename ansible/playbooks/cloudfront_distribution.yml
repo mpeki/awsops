@@ -1,0 +1,34 @@
+---
+# manage cloudfront distributions and route53 dnsrecords
+- name: "{{ mode }} cloudfront Distribution"
+  hosts: localhost
+  vars_files:
+    - "{{ '../vars/cust/cust_' + cust_name + '.yml'}}"
+    - "../vars/aws/accounts.yml"
+  vars:
+    var_role_region: "{{ cust_config[cust_name][env_name]['aws_profile'].region }}"
+
+  tasks:
+    - name: Validate cust_name/env_name
+      assert:
+        that:
+          - cust_name is defined
+          - env_name is defined
+        fail_msg: "vars 'cust_name' and 'env_name' are required"
+
+    - name: Validate deployable component
+      assert:
+        that:
+          - project_name | regex_search('^cjd|brd|com|spd$')
+        fail_msg: "'project_name' var must be one of the following: cjd|brd|com|spd"
+
+    - name: "{{ mode }} cloudfront"
+      include_role:
+        name: aws_cloudfront
+      vars:
+        role_region: "{{ var_role_region }}"
+        project_name: "{{ project_name }}"
+        dns_subdomain: "{{ cust_config[cust_name][env_name]['aws_network']['dns_subdomain'][project_name] | default(cust_config[cust_name][env_name].account + '-' + project_name ) }}"
+        dns_domain: "{{ cust_config[cust_name][env_name]['aws_network']['dns_domain'] | mandatory }}"
+        route_53_enabled: "{{ cust_config[cust_name][env_name]['aws_network']['route_53_enabled'] }}"
+        cust_environment_name: "{{ cust_config[cust_name][env_name].account }}"

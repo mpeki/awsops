@@ -1,0 +1,11 @@
+---
+# defaults file for cjd_aws_networking
+stack_state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+
+script_dir: "../../cloudformation/network"
+vpc_network_stack_name: CuSSP-network
+internet_stack_name: CuSSP-internet
+intranet_stack_name: CuSSP-intranet
+internet_security_stack_name: CuSSP-internet-security
+intranet_security_stack_name: CuSSP-intranet-security
+local_dns_name: cussp.local

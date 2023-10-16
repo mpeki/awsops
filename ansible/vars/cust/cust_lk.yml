@@ -1,0 +1,153 @@
+---
+cust_config:
+  lk:
+    dev:
+      account: lkdev
+      number: 801632488040
+      aws_network:
+        customer_ipv4_address: 83.221.154.221
+        vpc_cidr_prefix: 10.44.72
+        dest_cidr_block: 192.168.0.0/20
+      aws_profile:
+        role_name: lkdevops
+        admin_role_name: admin
+        tia_admin_role_name: admin
+        region: eu-central-1
+        amq_username: admin
+        amq_password: !vault |
+          $ANSIBLE_VAULT;1.2;AES256;aws_vault
+          35353164396533313761623032303638323934333265663332643964366134623262623063386130
+          6631646165666265616264333337353330313935633231650a383831353332663034613235366638
+          36383337316164313964663331336338386432616438373933656234306135383536653731323335
+          6639663037663730620a663231353263396232336231316235383831333437346638366364333938
+          32306536643535356431656431613539316235646238306364376131363138626633
+    dv:
+      account: lkdv
+      number: 833803322944
+      aws_network:
+        customer_ipv4_address: 83.221.154.221
+        vpc_cidr_prefix: 10.44.112
+        dest_cidr_block: 192.168.0.0/20
+        dns_domain: theinsuranceapplication.com
+        dns_subdomain: 
+          cjd: lkdv-cjd
+          brd: lkdv-brd
+          spd: lkdv-spd
+        route_53_enabled: true
+      aws_profile:
+        role_name: lkdvops
+        admin_role_name: admin
+        tia_admin_role_name: admin
+        region: eu-central-1
+        amq_username: admin
+        amq_password: !vault |
+          $ANSIBLE_VAULT;1.2;AES256;aws_vault
+          63643435333564393337343431333338313930336532356637633932373133623838366433373266
+          6231306234613237353461323864373266376535383438620a373564636562666630323734656135
+          36306339623566663062643139323937363064376331346634656435386532633665393166626539
+          3038313733663334340a326566306661343133353733643261383537353963346531666133623363
+          31306235333866363832353663633735373065383937663862303736636434336637
+    qa:
+      account: lkqa
+      number: 148160847177
+      aws_network:
+        customer_ipv4_address: 83.221.154.221
+        vpc_cidr_prefix: 10.44.136
+        dest_cidr_block: 192.168.0.0/20
+        dns_domain: theinsuranceapplication.com
+        dns_subdomain: 
+          cjd: lkqa-cjd
+          brd: lkqa-brd
+          spd: lkqa-spd
+        route_53_enabled: true
+      aws_profile:
+        role_name: lkqaops
+        admin_role_name: lk_admin
+        tia_admin_role_name: admin
+        region: eu-central-1
+        amq_username: admin
+        amq_password: !vault |
+          $ANSIBLE_VAULT;1.2;AES256;aws_vault
+          37393965366132653664353333363332353537633534356530383136373562323965323532393633
+          3336363463383635393732323237323136383631326162340a363930393136303765373361326330
+          33613566643061306532353130353939303362646566346331343939633533613936663936363037
+          6464353433316365300a373061363338623330623930653137343436633562306363343537393536
+          33393264343761333262366431666239336538653061336461656632636231323438
+    test:
+      account: lktest
+      number: 927171048825
+      aws_network:
+        customer_ipv4_address: 83.221.154.221
+        vpc_cidr_prefix: 10.44.144
+        dest_cidr_block: 192.168.0.0/20
+        dns_domain: theinsuranceapplication.com
+        dns_subdomain: 
+          cjd: lktest-cjd
+          brd: lktest-brd
+          spd: lktest-spd
+        route_53_enabled: true
+      aws_profile:
+        role_name: lktestops
+        admin_role_name: lk_admin
+        tia_admin_role_name: admin
+        region: eu-central-1
+        amq_username: admin
+        amq_password: !vault |
+          $ANSIBLE_VAULT;1.2;AES256;aws_vault
+          61643039376564626639653736313938326231626562316336353939636464353636383863343834
+          6563303831323434633763333232623336663466333862610a616135353638353035303736393838
+          39633431323063633038373130303664303636646565333737313666623038366430646635343166
+          3164633266626664610a653866396635386336363462396433666237333938656536356332633531
+          34353166333363656230336131363638646562643232636431316132386431653965
+    migtest:
+      account: lkmigtest
+      number: 052631791166
+      aws_network:
+        customer_ipv4_address: 83.221.154.221
+        vpc_cidr_prefix: 10.44.152
+        dest_cidr_block: 192.168.0.0/20
+        dns_domain: theinsuranceapplication.com
+        dns_subdomain: 
+          cjd: lkmigtest-cjd
+          brd: lkmigtest-brd
+          spd: lkmigtest-spd
+        route_53_enabled: true
+      aws_profile:
+        role_name: lkmigtestops
+        admin_role_name: lk_admin
+        tia_admin_role_name: admin
+        region: eu-central-1
+        amq_username: admin
+        amq_password: !vault |
+          $ANSIBLE_VAULT;1.2;AES256;aws_vault
+          31653630616161393433633838666237376261376332353534306332623262373137333536336462
+          6630303430336330393438656537306231303931303664390a616466383031646663396162383839
+          32656364363332333062613833653533336133313439386661396431663430306263386438353062
+          3730646337396665320a613430356338393333343137383761363064613863356132656336356564
+          34323738663733623166643362643966653338333335646133346437636632316433
+    uat:
+      account: lkuat
+      number: 875018536235
+      aws_network:
+        customer_ipv4_address: 83.221.154.221
+        vpc_cidr_prefix: 10.44.160
+        dest_cidr_block: 192.168.0.0/20
+        dns_domain: landkreditt.no
+        dns_subdomain: 
+          cjd: lkuat-cjd
+          brd: lkuat-brd
+          spd: lkuat-spd
+        route_53_enabled: true
+      aws_profile:
+        role_name: lkuatops
+        admin_role_name: lk_admin
+        tia_admin_role_name: admin
+        region: eu-central-1
+        amq_username: admin
+        amq_password: !vault |
+          $ANSIBLE_VAULT;1.2;AES256;aws_vault
+          63633539623734373034353736353534623332636538373738646561303036356230313763616366
+          3630653831306662663866353939356539326435363763370a663333323033643564383532643830
+          62643135643136663431383637633137353336396136376431313536333365633663313166303466
+          3230663535623265390a653334333237623761303062333434623166633731663437326430643530
+          39303961643530366630306662363535373934323737636566336538393433626462

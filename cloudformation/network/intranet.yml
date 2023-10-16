@@ -1,0 +1,183 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "VPN Gateway and Route Table for intranet traffic for Customer Self Service Portal"
+
+Parameters:
+  NetworkStack:
+    Type: "String"
+    Description: "Network stack to apply to."
+
+  BgpAsn:
+    Type: "String"
+    AllowedPattern: "\\d{1,5}"
+    Description: "Autonomous System Number."
+
+  DestinationCidrBlock:
+    Type: "String"
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\/(\\d{1,2})"
+    Description: "The static internet-routable IP address for the customer gateway's outside interface."
+
+  CustomerIpV4Address:
+    Type: "String"
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})"
+    Description: "The static internet-routable IP address for the customer gateway's outside interface."
+
+Resources:
+  CustomerGateway:
+    Type: "AWS::EC2::CustomerGateway"
+    Properties:
+      BgpAsn: !Sub ${BgpAsn}
+      IpAddress: !Sub ${CustomerIpV4Address}
+      Type: ipsec.1
+      Tags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-CustomerGateway
+
+  VPNGateway:
+    Type: "AWS::EC2::VPNGateway"
+    Properties:
+      Type: ipsec.1
+      Tags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-VPNGateway
+      - Key: Scope
+        Value: private
+
+  # Provide the VPC with access to the intranet via VPN
+  VPNConnection:
+    Type: "AWS::EC2::VPNConnection"
+    DependsOn: [CustomerGateway, VPNGateway]
+    Properties:
+      Type: ipsec.1
+      StaticRoutesOnly: true
+      CustomerGatewayId:
+        !Ref CustomerGateway
+      VpnGatewayId:
+        !Ref VPNGateway
+      Tags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-VPNConnection
+      - Key: Scope
+        Value: private
+
+  # A static route that is associated with a VPN connection between an existing virtual private gateway and a VPN customer gateway.
+  VPNConnectionRoute:
+    Type: "AWS::EC2::VPNConnectionRoute"
+    DependsOn: VPNConnection
+    Properties:
+      DestinationCidrBlock: !Sub ${DestinationCidrBlock}
+      VpnConnectionId:
+        !Ref VPNConnection
+
+  # The VPN gateway alone is not enough, it must be attached to a vpc
+  VPNGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpnGatewayId: !Ref VPNGateway
+      VpcId:
+        Fn::ImportValue:              # IMPORT a value we exported from another stack
+          !Sub ${NetworkStack}-VpcId  # SUB-stitute the NetworkStack parameter to derive the export name
+
+  # add a route to the route table
+  VPNRouteToIntranet:
+    # force Cloudformation to attach the VPN gateway before creating the route
+    DependsOn: VPNGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: !Sub ${DestinationCidrBlock}
+      GatewayId: !Ref VPNGateway
+      RouteTableId: !Ref PrivateRouteTable
+
+  # Private subnets will need to reach OUT to the internet while remaining PRIVATE
+  # Network Address Translation solves this, so add a NAT gateway
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-SubnetDmzAId
+
+  # NAT gateway needs a public Elastic IP address
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  # private subnets need a route table
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcId
+      Tags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-PrivateRouteTable
+      - Key: Scope
+        Value: private
+
+  PrivateRouteToInternet:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0 # all traffic not destined for the VPC range
+      NatGatewayId: !Ref NatGateway   # gets routed through the NAT gateway
+
+  # Route tables need to be associated with subnets
+  PrivateRouteTableAssociationA:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-SubnetNodesAId
+
+  PrivateRouteTableAssociationB:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-SubnetNodesBId
+
+  PrivateRouteTableAssociationC:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-SubnetNodesCId
+
+  PrivateRouteTableAssociationDbA:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-SubnetDbAId
+
+  PrivateRouteTableAssociationDbB:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-SubnetDbBId
+
+  PrivateRouteTableAssociationDbC:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-SubnetDbCId
+
+Outputs:
+  VpnCidr:
+      Description : "VPN CIDR Block"
+      Value:  !Ref DestinationCidrBlock
+      Export:
+        Name: !Sub ${AWS::StackName}-VpnCidr
+

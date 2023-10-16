@@ -1,0 +1,43 @@
+---
+# Shared services AWS.
+#
+# This playbook can be used to both 'create' or 'delete' the shared cloudformation stacks.
+# This operation mode is controlled by the extra_var 'mode'. e.g. ansible-playbook playbooks/shared_services.yml -e mode="create"
+# Activemq relies on an encrypted var (mq_password), so the aws_vault secret must be loaded.
+#
+# Select which shared service to use with the extra_var 'service'.
+# Supported services are rds, redis, activemq, elasticsearch, policy
+- name: "{{ mode }} shared services"
+  hosts: localhost
+  vars_files:
+    - "{{ '../vars/cust/cust_' + cust_name + '.yml'}}"
+  vars:
+    var_role_region: "{{ cust_config[cust_name][env_name]['aws_profile'].region }}"
+
+  tasks:
+    - name: Validate cust_name/env_name
+      assert:
+        that:
+          - cust_name is defined
+          - env_name is defined
+        fail_msg: "vars 'cust_name' and 'env_name' are required"
+
+    - name: Validate mode
+      assert:
+        that:
+          - "mode == 'create' or  mode == 'delete'"
+        fail_msg: "mode var must be either 'create' or 'delete'. ie -e 'mode=create'"
+
+    - name: Validate service
+      assert:
+        that:
+          - service | regex_search('^activemq|elasticsearch|policy|rds|redis$')
+        fail_msg: "'service' var must be one of the following: activemq|elasticsearch|policy|rds|redis"
+
+    - name: "{{ mode }} shared services"
+      include_role:
+        name: aws_shared_services
+      vars:
+        role_region: "{{ var_role_region }}"
+        mq_user: "{{ cust_config[cust_name][env_name]['aws_profile'].amq_username }}"
+        mq_password: "{{ cust_config[cust_name][env_name]['aws_profile'].amq_password }}"

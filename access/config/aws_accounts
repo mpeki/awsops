@@ -1,0 +1,76 @@
+[default]
+region = eu-central-1
+[profile dev]
+role_arn = arn:aws:iam::281283362525:role/DevOps
+source_profile = admin
+region = eu-central-1
+[profile demo]
+role_arn = arn:aws:iam::311542012115:role/DemoOps
+source_profile = admin
+region = eu-central-1
+[profile sbhdemo]
+role_arn = arn:aws:iam::485853774387:role/SBHDemoOps
+source_profile = admin
+region = eu-central-1
+[profile sbhtest]
+role_arn = arn:aws:iam::895076489986:role/SBHTestOps
+source_profile = admin
+region = eu-central-1
+[profile m1]
+role_arn = arn:aws:iam::676835235756:role/M1Ops
+source_profile = admin
+region = eu-central-1
+[profile rnddev]
+role_arn = arn:aws:iam::515257242789:role/RndDevOps
+source_profile = admin
+region = eu-central-1
+[profile admin]
+region = eu-central-1
+[profile lkdev]
+role_arn = arn:aws:iam::801632488040:role/LkDevOps
+source_profile = admin
+region = eu-central-1
+[profile sbhsit]
+role_arn = arn:aws:iam::388832037785:role/SBHSITOps
+source_profile = admin
+region = eu-central-1
+[profile sbhsit3]
+role_arn = arn:aws:iam::421097679277:role/SBHSIT3Ops
+source_profile = sbh_admin
+region = eu-central-1
+[profile sbhdv]
+role_arn = arn:aws:iam::242700670615:role/SBHDVOps
+source_profile = admin
+region = eu-central-1
+[profile sbhuat]
+role_arn = arn:aws:iam::212851381958:role/SBHUATOps
+source_profile = sbh_admin
+region = eu-central-1
+[profile lkdv]
+role_arn = arn:aws:iam::833803322944:role/LKDVOps
+source_profile = admin
+region = eu-central-1
+[profile sbhpreprod]
+role_arn = arn:aws:iam::894835815452:role/SBHPREPRODOps
+source_profile = sbh_admin
+region = eu-central-1
+[profile sbhprod]
+role_arn = arn:aws:iam::105117519332:role/SBHPRODOps
+source_profile = sbh_admin
+region = eu-central-1
+[profile lkqa]
+role_arn = arn:aws:iam::148160847177:role/LKQAOps
+source_profile = lk_admin
+region = eu-central-1
+[profile lktest]
+role_arn = arn:aws:iam::927171048825:role/LKTestOps
+source_profile = lk_admin
+region = eu-central-1
+[profile lkmigtest]
+role_arn = arn:aws:iam::052631791166:role/LKMigTestOps
+source_profile = lk_admin
+region = eu-central-1
+[profile lkuat]
+role_arn = arn:aws:iam::875018536235:role/LKUatOps
+source_profile = lk_admin
+region = eu-central-1

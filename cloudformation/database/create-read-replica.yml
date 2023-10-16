@@ -1,0 +1,42 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "RDS read replica setup for Microservices"
+
+Parameters:
+  ServiceName:
+    AllowedValues:
+      - "users-api"
+      - "claims-api"
+      - "tia-claims-adapter"
+      - "trd-api"
+      - "communications-service"
+      - "brd-scheduler"
+      - "bs-spd-service-api"
+      - "ds-ui-configuration"
+      - "auth0-user-details"
+    Type: String
+    Description: "DB for this service"
+  SourceRegion:
+    Type: String
+    Description: Region which Primary database exists in
+    Default: "eu-central-1"
+
+  DatabaseAllocatedStorage:
+    Default: "20"
+    Description: The allocated storage to use for the database.
+    Type: String
+
+Resources:
+  MicroServiceDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Join ['-', [!Ref ServiceName, "read-replica"]]
+      SourceDBInstanceIdentifier: !Join [':', [ "arn:aws:rds", !Ref SourceRegion, !Ref "AWS::AccountId", db, !Join ['-', [!Ref ServiceName, "db"]]]]
+      SourceRegion: !Ref SourceRegion
+      BackupRetentionPeriod: 30
+      StorageType: gp2
+      AllocatedStorage:
+        Ref: DatabaseAllocatedStorage
+      PubliclyAccessible: false
+      CopyTagsToSnapshot: true
+      KmsKeyId: !Sub 'arn:aws:kms:eu-north-1:${AWS::AccountId}:alias/aws/rds'

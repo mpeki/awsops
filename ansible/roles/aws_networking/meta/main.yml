@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: pha@tiatechnology.com
+  description: Manages Networking for aws.
+  company: TIA
+
+  platforms:
+    - name: Oracle Linux
+      versions:
+        - 7
+
+  license: MIT
+
+  min_ansible_version: 2.7
+
+

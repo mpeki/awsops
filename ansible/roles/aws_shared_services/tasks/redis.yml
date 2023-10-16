@@ -1,0 +1,27 @@
+---
+- name: "{{ mode }} redis subnet security"
+  cloudformation:
+    stack_name: "{{ redis_subnet_stack_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ redis_script_dir }}/redis-subnet-sec.yml"
+    template_parameters:
+      NetworkStack: "{{ network_stack_name }}"
+      IntranetStack: "{{ intranet_stack_name }}"
+
+- name: "{{ mode }} redis"
+  cloudformation:
+    stack_name: "{{ redis_stack_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ redis_script_dir }}/redis-setup.yml"
+    template_parameters:
+      NetworkStack: "{{ network_stack_name }}"
+      RedisSubnetStack: "{{ redis_subnet_stack_name }}"
+      RedisNodeType: "{{ redis_instance_type }}"

@@ -1,0 +1,92 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a AmazonMQ broker
+
+Parameters:
+  NetworkStack:
+    Type: String
+    Description: Network stack to apply to.
+
+  MQSecurityStackName:
+    Type: String
+    Description: Securitygroup stack.
+
+  MQBrokerName:
+    Type: String
+    Description: Name of ActiveMQ Broker.
+
+  MQinstanceType:
+    Type: String
+    Description: Instancetype ActiveMQ.
+
+  MQSecurityGroupId:
+    Type: String
+    Description: The security group
+
+  MQUserName:
+    Type: String
+    Description: Name of MQ user
+
+  MQPassword:
+    Type: String
+    Description: password of MQ user
+
+  MQDNSName:
+    Type: String
+    Description: DNS name of ActiveMQ.
+    Default: amq
+
+Resources:
+  MQBroker:
+    Type: AWS::AmazonMQ::Broker
+    Properties:
+      AutoMinorVersionUpgrade: true
+      BrokerName: !Ref MQBrokerName
+      DeploymentMode: SINGLE_INSTANCE
+      EngineType: ActiveMQ
+      EngineVersion: 5.15.9
+      HostInstanceType: !Ref MQinstanceType
+      Logs:
+        General: true
+        Audit: false
+      MaintenanceWindowStartTime:
+        DayOfWeek: Sunday
+        TimeOfDay: 01:00
+        TimeZone: UTC
+      PubliclyAccessible: false
+      SecurityGroups:
+        - Fn::ImportValue:
+            !Sub ${MQSecurityStackName}-VPCSecurityGroup
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetNodesAId
+      Users:
+        - ConsoleAccess: true
+          Password:
+            Ref: MQPassword
+          Username:
+            Ref: MQUserName
+
+  # Register ActiveMQ as a known DNS entry in the private hosted zone
+  InternalMQDNS:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName:
+        !Join
+        - ''
+        - - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+          - '.'
+      Comment: DNS for ActiveMQ instance.
+      RecordSets:
+        - Name:
+            !Join
+            - ''
+            - - !Ref MQDNSName
+              - '.'
+              - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+              - '.'
+          Type: A
+          TTL: 300
+          SetIdentifier: AMQ Route
+          MultiValueAnswer: true
+          ResourceRecords: !GetAtt MQBroker.IpAddresses

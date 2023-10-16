@@ -1,0 +1,46 @@
+---
+# tasks file for aws_loadbalancer
+
+# run cloudformation template
+- name: Get sts admin token - Loadbalancer setup
+  include_role:
+    name: aws_sts_login
+  vars:
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].secret_access_key }}"
+    assume_role_session_name: "ansible-{{ mode }}-{{ role_name }}"
+    assume_role_arn: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].role_name].role_arn }}"
+
+- name: "{{ mode }} loadbalancer"
+  cloudformation:
+    stack_name: "{{ elb_stack_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ script_dir }}/internet-elb.yml"
+    template_parameters:
+      NetworkStack: "{{ network_stack_name }}"
+      ElbName: "{{ elb_name }}"
+      LogBucketName: "{{ log_bucket_name }}"
+
+- block: # In delete mode only.
+    # Collect a list of active s3 buckets, to determine whether the S3 logs need cleaning up.
+    - name: aws_s3_bucket_facts
+      aws_s3_bucket_facts:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+      register: s3_buckets
+
+    - name: Delete all S3 objects in -logs
+      aws_s3:
+        aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+        aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+        security_token: "{{ assumed_role.sts_creds.session_token }}"
+        bucket: "{{ log_bucket_name }}"
+        mode: delete
+      # This block only runs when the bucket actually exists in s3
+      when: (s3_buckets.ansible_facts.buckets |  selectattr('name','equalto', log_bucket_name) ) | list # true when list isn't empty
+  when: mode|lower == 'delete'

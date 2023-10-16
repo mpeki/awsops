@@ -1,0 +1,120 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Service setup for X-Ray Deamon"
+
+Parameters:
+  NetworkStack:
+    Type: "String"
+    Description: "Network stack to apply to."
+
+  EcsStack:
+    Type: "String"
+    Description: "ECS stack to apply to."
+
+  EcsCluster:
+    Type: "String"
+    Description: "The ECS cluster for services"
+
+  EcsTaskRoleForServices:
+    Type: "String"
+    Description: "The role used for tasks"
+
+  EcsExecutionRoleForServices:
+    Type: "String"
+    Description: "The role used for execution (used by Fargate)"
+
+  ServiceName:
+    Type: "String"
+    Default: "xray-daemon"
+    Description: "Service names must be unique within a cluster, but you can have similarly named services in multiple clusters within a region or across multiple regions."
+
+  ServiceCpu:
+    Type: "Number"
+    Default: 100
+    Description: "The minimum number of CPU units to reserve for the service."
+
+  ServiceMemory:
+    Type: "Number"
+    Default: 768
+    Description: "The number of MiB of memory to reserve for the service."
+
+  ServiceDesiredCount:
+    Type: "Number"
+    Description: "The number of simultaneous tasks that you want to run on the cluster.."
+
+Resources:
+  CloudwatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [/ecs/taas/, !Ref ServiceName]]
+      RetentionInDays: 7
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Join ['-', [taas, !Ref ServiceName]]
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !Ref EcsExecutionRoleForServices
+      TaskRoleArn: !Ref EcsTaskRoleForServices
+      Cpu: !Ref ServiceCpu
+      Memory: !Ref ServiceMemory
+      RequiresCompatibilities:
+        - FARGATE
+      ContainerDefinitions:
+        - Name: !Ref ServiceName
+          Image: amazon/aws-xray-daemon
+          Command:
+            - -o
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref CloudwatchLogsGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          PortMappings:
+            - ContainerPort: 2000
+              Protocol: udp
+          Environment:
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - CloudwatchLogsGroup
+    Properties:
+      ServiceName: !Ref ServiceName
+      Cluster: !Ref EcsCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref ServiceDesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - Fn::ImportValue:
+                !Sub ${EcsStack}-EcsSecurityGroup
+          Subnets:
+            - Fn::ImportValue:
+                !Sub ${NetworkStack}-SubnetNodesAId
+            - Fn::ImportValue:
+                !Sub ${NetworkStack}-SubnetNodesBId
+            - Fn::ImportValue:
+                !Sub ${NetworkStack}-SubnetNodesCId
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      ServiceRegistries:
+        - RegistryArn: !Sub ${ServiceDiscoveryService.Arn}
+
+  ServiceDiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: !Ref ServiceName
+      DnsConfig:
+        NamespaceId:
+          Fn::ImportValue: !Sub ${NetworkStack}-ServiceDiscoveryNamespaceID
+        DnsRecords:
+          - Type: A
+            TTL: 60
+      HealthCheckCustomConfig:
+        FailureThreshold: 1

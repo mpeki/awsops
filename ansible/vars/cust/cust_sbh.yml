@@ -1,0 +1,155 @@
+---
+  # Variables specific to SBH
+  cust_config:
+    sbh:
+      sit:
+        account: sbhsit
+        number: 388832037785
+        aws_network:
+          customer_ipv4_address: 83.221.154.221
+          vpc_cidr_prefix: 10.44.80
+          dest_cidr_block: 192.168.0.0/20
+        aws_profile:
+          role_name: sbhsitops
+          admin_role_name: admin
+          tia_admin_role_name: admin
+          region: eu-central-1
+          amq_username: admin
+          amq_password: !vault |
+            $ANSIBLE_VAULT;1.2;AES256;aws_vault
+            37656432373163343561386564613162336235363038383230303234383736306430383531613935
+            3633386361343632653862313238623164396665666136620a396663396534363961646161323837
+            35343765313164303430613437393233383365666638303164633032623463613132353436396134
+            3532343332366165390a636563333039313764663133636232356530616237653430623336306436
+            36616133373664366231363231643837356462373133616131363033363130613365
+      sit3:
+        account: sbhsit3
+        number: 421097679277
+        aws_network:
+          customer_ipv4_address: 83.221.154.221
+          vpc_cidr_prefix: 10.44.88
+          dest_cidr_block: 192.168.0.0/20
+          route_53_enabled: false
+          dns_domain: storebrand.no
+          dns_subdomain:
+            cjd: sbhsit-cjd
+            brd: sbhsit-brd
+            spd: sbhsit-spd
+            com: sbhsit-com
+        aws_profile:
+          role_name: sbhsit3ops
+          admin_role_name: sbh_admin
+          tia_admin_role_name: admin
+          region: eu-central-1
+          amq_username: admin
+          amq_password: !vault |
+            $ANSIBLE_VAULT;1.2;AES256;aws_vault
+            37323936383936363538646133363037663261383732323230386337316136336161386634626138
+            6337326433613939333638333662353739393662333964390a336431633765383365643764336139
+            65303866336666636133356166376138366434663635336362356364656366393938383062303462
+            3365666663366661630a383761343066383937323566326363653136373830356566653361376231
+            38346137383632353030333634663238613332323035383438383335663336616331
+      dv:
+        account: sbhdv
+        number: 242700670615
+        aws_network:
+          customer_ipv4_address: 83.221.154.221
+          vpc_cidr_prefix: 10.44.96
+          dest_cidr_block: 192.168.0.0/20
+          dns_domain: theinsuranceapplication.com
+          dns_subdomain:
+            cjd: sbhdv-cjd
+            brd: sbhdv-brd
+            spd: sbhdv-spd
+            com: sbhdv-com
+        aws_profile:
+          role_name: sbhdvops
+          admin_role_name: admin
+          tia_admin_role_name: admin
+          region: eu-central-1
+          amq_username: admin
+          amq_password: !vault |
+            $ANSIBLE_VAULT;1.2;AES256;aws_vault
+            39356265346663393630343230393761386534316162613939626436646631366130613963376164
+            3435346530633165643962366561313334376531323038650a363433363262656239623033373566
+            38613935383262666162613037666464663332656561383433356239376231646663643637633431
+            3036306234373164660a316661353862626437353666333733396164633438653231636361613830
+            66643838383463646563663239666366646263363333343632356565393039326638
+      uat:
+        account: sbhuat
+        number: 212851381958
+        aws_network:
+          customer_ipv4_address: 83.221.154.221
+          vpc_cidr_prefix: 10.44.104
+          dest_cidr_block: 192.168.0.0/20
+          dns_domain: storebrand.no
+          dns_subdomain:
+            cjd: sbhuat-cjd
+            brd: sbhuat-brd
+            spd: sbhuat-spd
+            com: sbhuat-com
+        aws_profile:
+          role_name: sbhuatops
+          admin_role_name: sbh_admin
+          tia_admin_role_name: admin
+          region: eu-central-1
+          amq_username: admin
+          amq_password: !vault |
+            $ANSIBLE_VAULT;1.2;AES256;aws_vault
+            64616131626561666436613338616662373362616538383437303062336632353462323130653766
+            6466396361623863653432316231343032343539383961620a653866663434616131353834666265
+            65303064303234363263613735626662373564656137653866303762363164383532613831646365
+            3936333166643232650a373832656231353765323034393831613438646430666537313432336164
+            66663964613465316565613238396535643636336433663530333831313035303237
+      preprod:
+        account: sbhpreprod
+        number: 894835815452
+        aws_network:
+          customer_ipv4_address: 83.221.154.221
+          vpc_cidr_prefix: 10.44.120
+          dest_cidr_block: 192.168.0.0/20
+          dns_domain: storebrand.no
+          dns_subdomain:
+            cjd: sbhpreprod-cjd
+            brd: sbhpreprod-brd
+            spd: sbhpreprod-spd
+            com: sbhpreprod-com
+        aws_profile:
+          role_name: sbhpreprodops
+          admin_role_name: sbh_admin
+          tia_admin_role_name: admin
+          region: eu-central-1
+          amq_username: admin
+          amq_password: !vault |
+            $ANSIBLE_VAULT;1.2;AES256;aws_vault
+            39656630393035306233396637386665636435313665346362333662383965663363353933613062
+            3766663333623930386530343034383461383931313466300a623965383934323661633435396232
+            64636339306235666631663736386632333864313532396461313635323965393431643333633561
+            6665343731633233660a393135343062653137363463363237336432643566366264353539386138
+            39626437623135393933306361613833636165316664353439666435343530616262
+      prod:
+        account: sbhprod
+        number: 894835815452
+        aws_network:
+          customer_ipv4_address: 83.221.154.221
+          vpc_cidr_prefix: 10.44.128
+          dest_cidr_block: 192.168.0.0/20
+          dns_domain: storebrand.no
+          dns_subdomain:
+            cjd: tia-cjd
+            brd: tia-brd
+            spd: tia-spd
+            com: tia-com
+        aws_profile:
+          role_name: sbhprodops
+          admin_role_name: sbh_admin
+          tia_admin_role_name: admin
+          region: eu-central-1
+          amq_username: admin
+          amq_password: !vault |
+            $ANSIBLE_VAULT;1.2;AES256;aws_vault
+            37393863376539376664326462303165353964663833373665303337383536376134323162613437
+            3362353632383666313938393865653436653261346632330a643138386437646436383331613466
+            63333835623963363130666639386662633434613562316431376631396232386431373765363865
+            3433656563373238620a316234366466613834383935313432366432616430663863363666366531
+            61613238636231313061346363343764626266653539383230323065373932613136

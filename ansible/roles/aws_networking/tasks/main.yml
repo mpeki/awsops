@@ -1,0 +1,46 @@
+---
+# tasks file for aws_networking
+- name: Get sts admin token - networking
+  include_role:
+    name: aws_sts_login
+  vars:
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].secret_access_key }}"
+    assume_role_session_name: "ansible-{{ mode }}-{{ role_name }}"
+    assume_role_arn: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].role_name].role_arn }}"
+
+- name: create network stacks
+  block:
+  - name: VPC and Subnets for Customer Self Service Portal
+    include_tasks: vpc.yml
+
+  - name: internet networking
+    include_tasks: internet.yml
+
+  - name: intranet networking
+    include_tasks: intranet.yml
+
+  - name: security policies
+    include_tasks: security_policy.yml
+
+  - name: vpc endpoint for s3
+    include_tasks: vpc_endpoint_s3.yml
+  when: mode == 'create'
+
+- name: delete network stacks
+  block:
+  - name: vpc endpoint for s3
+    include_tasks: vpc_endpoint_s3.yml
+
+  - name: security policies
+    include_tasks: security_policy.yml
+
+  - name: intranet networking
+    include_tasks: intranet.yml
+
+  - name: internet networking
+    include_tasks: internet.yml
+
+  - name: VPC and Subnets for Customer Self Service Portal
+    include_tasks: vpc.yml
+  when: mode == 'delete'

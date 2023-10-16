@@ -1,0 +1,199 @@
+#!/usr/bin/env groovy
+
+library(
+  identifier: 'cicd-commons@master',
+  retriever: modernSCM([
+    $class       : 'GitSCMSource',
+    remote       : 'https://git.tiatechnology.com/arc/bs-ci-lib.git',
+    credentialsId: 'jenkins-checkout-git.tiatechnology.com'
+  ])
+) _
+
+def accounts = []
+def jobProperties = [:]
+def solutions = []
+Map deploySpec = [:]
+
+def createUploadStages(def deploySpec){
+  def jobProperties = deploySpec.jobProperties
+  def uploadItems = deploySpec.uploadItems
+  def awsAccount = deploySpec.awsAccount
+  def versionsToDeploy = deploySpec.versionsToDeploy
+  def dryRun = deploySpec.dryRun
+  if(uploadItems == null || uploadItems == "" ){
+    return
+  }
+  def result = [:]
+  for(def uItem : (uploadItems.split(",") as List)){
+    def item = uItem
+    result["${item}"] = {
+      stage("${item}"){
+        script{
+          def projectBranch = jobProperties["${item}.project.branch"] == null ? jobProperties["default.project.branch"] : jobProperties["${item}.project.branch"]
+          dir("${item}"){
+            deleteDir()
+            def gitUrl = jobProperties["${item}.project.url"]
+            git credentialsId: 'jenkins-read-write-git.tiatechnology.com', url: gitUrl, branch: projectBranch
+          }
+          String configFile = checkoutDesignerConfig(awsAccount: awsAccount, uploadItem: item, jobProperties: jobProperties)
+          def repoPath = jobProperties["${item}.repo.path"]
+          def itemVersion = ""
+          if (versionsToDeploy instanceof String){
+            itemVersion = versionsToDeploy
+          } else if (versionsToDeploy instanceof Map){
+            itemVersion = versionsToDeploy["${item}-version"]
+          }
+          def repoPattern = "${repoPath}*${itemVersion}.tar.gz"
+          def deployPkgName = "deploy-package-${itemVersion}.tar.gz"
+          def appConfigDir = jobProperties["${item}.app.config.dir"] == null ? jobProperties["default.app.config.dir"] : jobProperties["${item}.app.config.dir"]
+          def appDistDir = jobProperties["${item}.app.dist.dir"] == null ? jobProperties["default.app.dist.dir"] : jobProperties["${item}.app.dist.dir"]
+          dir("${item}") {
+            rtDownload(
+              serverId: 'tia-artifactory',
+              spec: """{
+                    "files": [
+                              {
+                                "pattern": "${repoPattern}",
+                                "target": "${deployPkgName}",
+                                "flat": "true"
+                              }
+                            ]
+                    }"""
+            )
+            if (appDistDir == jobProperties["default.app.dist.dir"] || appDistDir == "build") {
+              sh "tar -xzvf ${deployPkgName}"
+            } else {
+              sh "mkdir ${appDistDir}"
+              sh "tar -xzvf ${deployPkgName} -C ${appDistDir}"
+            }
+          }
+          println "Handling configuration file: ${configFile}"
+          if(configFile != null) {
+            sh """#!/bin/bash
+                if [[ -f ${configFile} && '${appConfigDir}' != '.' ]]; then
+                  find ./${item}/${appDistDir}/ -type d -name ${appConfigDir} -exec cp ${configFile} {}/config.json \\;
+                elif [[ -d ${configFile} && '${appConfigDir}' != '.' ]]; then
+                  find ./${item} -type d -name ${appConfigDir} -exec cp -r ${configFile}*/* {}/ \\;
+                elif [[ -d ${configFile} && '${appConfigDir}' == '.' ]]; then
+                  cp -r ${configFile}*/* ${item}/${appDistDir}
+                else
+                  echo "NB! Configuration [${configFile}] not found - check s3-deploy.properties"
+                fi
+            """
+          } else {
+            println 'NB! No configuration to copy.'
+          }
+          def deployDir = jobProperties["${item}.project.root"] == null ? "${item}" : "${item}/" + jobProperties["${item}.project.root"]
+          dir(deployDir){
+            sh 'chmod +x deploy.sh'
+            def s3BucketFolderPath = jobProperties["${item}.${awsAccount}.deployment.path"]
+            def portalURL = jobProperties["${item}.${awsAccount}.deployment.url"]
+            def deployCommand = "./deploy.sh -p ${awsAccount}" + (s3BucketFolderPath ? " -f ${s3BucketFolderPath}" : "") + (portalURL ? " -u ${portalURL}" : "")
+            if ( dryRun == "true" ) {
+              sh "env"
+              println "This is a dry run, skip the actual deployment!"
+              sh "${deployCommand} || true"
+            } else {
+              catchError(message: "failed to deploy to: ${awsAccount}", buildResult: "SUCCESS", stageResult: "FAILURE") {
+                println "executing: [${deployCommand} deploy]"
+                sh "${deployCommand} deploy"
+              }
+              catchError(message: "failed to invalidate cloudfront cache for: ${awsAccount}", buildResult: "SUCCESS", stageResult: "UNSTABLE") {
+                println "executing: [${deployCommand} invalidate]"
+                sh "${deployCommand} invalidate"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return result
+}
+
+def createBuildVerificationMessage(def awsAccount, def versionsToDeploy, def dryRun){
+  def result = "Press OK to upload: \n"
+  result += "target aws accout : ${awsAccount}\n"
+  result += "items & versions: ${versionsToDeploy}\n"
+  result += dryRun == "true" ? "This is just a DRY_RUN, nothing will be uploaded" : ""
+  return result
+}
+
+node("docker"){
+  env.AWS_CONFIG="${WORKSPACE}/aws-operations/access/config/aws_accounts"
+  accounts = listAwsProfiles() - 'admin'
+  jobProperties = getJobProperties()
+  deploySpec.put("jobProperties",jobProperties)
+  solutions = jobProperties.solutions
+  sh 'env'
+}
+
+def packageName = ""
+
+pipeline {
+  agent {
+    label 'docker'
+  }
+  parameters {
+    choice(name: 'AWS_ACCOUNT', choices: accounts, description: 'Select aws target account')
+    extendedChoice(description: '', name: 'UPLOAD_ITEMS', type: 'PT_CHECKBOX', value: solutions, visibleItemCount: 50)
+    booleanParam(name: 'DRY_RUN', defaultValue: true, description: '')
+    text defaultValue: '', description: 'Deployment specification', name: 'DEPLOY_SPEC'
+  }
+  environment {
+    AWS_CONFIG="${WORKSPACE}/aws-operations/access/config/aws_accounts"
+  }
+  stages {
+    stage('deploy to aws') {
+        stages{
+            stage('setup'){
+              steps{
+                withDevToolbox {
+                  script {
+                    newDeployText = "${params.DEPLOY_SPEC}".trim()
+                    println newDeployText
+                    if (newDeployText != "") {
+                      newDeploySpec = readJSON(text: "${params.DEPLOY_SPEC}")
+                      deploySpec.putAll(newDeploySpec)
+                    } else {
+                      deploySpec.put("dryRun","${params.DRY_RUN}")
+                      deploySpec.put("uploadItems","${params.UPLOAD_ITEMS}")
+                      deploySpec.put("awsAccount","${params.AWS_ACCOUNT}")
+                      def versionsToDeploy = getArtifactoryVersionsInput(deploySpec: deploySpec)
+                      deploySpec.put("versionsToDeploy", versionsToDeploy)
+                    }
+//                    input(message: createBuildVerificationMessage(awsAccount, versionsToDeploy, dryRun))
+                    println deploySpec
+                    if(deploySpec.uploadItems != null && deploySpec.uploadItems != ''){
+                      parallel createUploadStages(deploySpec)
+                    }
+                    deploySpec.remove("jobProperties")
+                    writeJSON file: "deploy-specs/deploy-spec-${BUILD_ID}.json", json: deploySpec, pretty: 2
+                  }
+                }
+              }
+            }
+        }
+    }
+  }
+  post {
+    always {
+      writeJSON file: "deploy-specs/deploy-spec-${BUILD_ID}.json", json: deploySpec, pretty: 2
+    }
+    success {
+      archiveArtifacts "deploy-specs/deploy-spec-${BUILD_ID}.json"
+    }
+  }
+}
+
+def getJobProperties(){
+  def jobProperties = readProperties file: "aws-operations/jenkins/storage/s3-deploy.properties"
+  def jobPropertiesOverride = [:]
+  def overrideId = jobProperties['aws.s3.upload.override.id']
+  if(overrideId != null && overrideId != ""){
+    configFileProvider([configFile(fileId: overrideId, variable: 'JOB_PROPERTIES_OVERRIDE')]) {
+      jobPropertiesOverride = readProperties file: "${JOB_PROPERTIES_OVERRIDE}"
+    }
+  }
+  return jobProperties + jobPropertiesOverride
+}

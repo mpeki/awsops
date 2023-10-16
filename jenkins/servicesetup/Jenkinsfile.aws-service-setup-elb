@@ -1,0 +1,68 @@
+#!/usr/bin/env groovy
+
+library(
+  identifier: 'cicd-commons@master',
+  retriever: modernSCM([
+    $class       : 'GitSCMSource',
+    remote       : 'https://git.tiatechnology.com/arc/bs-ci-lib.git',
+    credentialsId: 'jenkins-checkout-git.tiatechnology.com'
+  ])
+) _
+def deployData = [:]
+def jobs = [:]
+pipeline {
+  agent {
+    label 'docker'
+  }
+  options {
+    timeout(time: 1, unit: 'HOURS')
+  }
+  environment {
+    UNICORN_HOME = "${WORKSPACE}"
+    AWS_SRV_OPS_HOME = "${WORKSPACE}/cloudformation/servicesetup"
+    AWS_MGT_OPS_HOME = "${WORKSPACE}/cloudformation/management"
+    AWS_CONFIG = "${WORKSPACE}/access/config/aws_accounts"
+  }
+
+  stages {
+    stage('Get input') {
+      steps {
+        script { currentBuild.description = "Initializing ..." }
+        withDevToolbox {
+          script {
+
+            deployData.put("jobProperties", getJobProperties())
+            jobs = createAwsStackJobs(deployData: getUserInput(deployData: deployData))
+            currentBuild.description = "Running ${deployData.defaultAction}..."
+          }
+        }
+      }
+    }
+    stage("Run") {
+      steps {
+        withDevToolbox {
+          doEcrStackAction(deployData: deployData, jobs: jobs)
+        }
+      }
+    }
+  }
+  post {
+    always {
+      script { currentBuild.description = "" }
+//         archiveArtifacts artifacts: '*.txt', followSymlinks: false
+      deleteDir()
+    }
+  }
+}
+
+def getJobProperties(){
+  def jobProperties = readProperties file: "jenkins/servicesetup/service-setup-elb.properties"
+  def jobPropertiesOverride = [:]
+  def overrideId = jobProperties['service.setup.elb.override.id']
+  if(overrideId != null && overrideId != ""){
+    configFileProvider([configFile(fileId: overrideId, variable: 'JOB_PROPERTIES_OVERRIDE')]) {
+      jobPropertiesOverride = readProperties file: "${JOB_PROPERTIES_OVERRIDE}"
+    }
+  }
+  return jobProperties + jobPropertiesOverride
+}

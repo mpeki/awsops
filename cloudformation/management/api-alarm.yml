@@ -1,0 +1,38 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudWatch Error Alarm and log filter for Service"
+Parameters:
+  ServiceName:
+    Type: "String"
+    Description: "Name of service to create alarm for."
+  AlarmTopicArn:
+    Type: "String"
+    Description: "The ARN of load alarm topic"
+
+Resources:
+  ApiAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AlarmTopicArn
+      AlarmDescription: !Join [' ', ["Errors in", !Ref ServiceName]]
+      AlarmName: !Join ['-', [!Ref ServiceName, "errors"]]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName:  !Join ['-', [!Ref ServiceName, "error-count"]]
+      Namespace: CuSSP
+      Period: 300
+      Statistic: Sum
+      Threshold: 1
+      TreatMissingData: notBreaching
+
+  LogFilter:
+    Type: "AWS::Logs::MetricFilter"
+    Properties:
+      FilterPattern: ERROR
+      LogGroupName: !Join ['', [/ecs/taas/, !Ref ServiceName]]
+      MetricTransformations:
+        - MetricValue: '1'
+          MetricNamespace: CuSSP
+          MetricName: !Join ['-', [!Ref ServiceName, "error-count"]]

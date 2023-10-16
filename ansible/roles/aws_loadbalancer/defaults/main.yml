@@ -1,0 +1,11 @@
+---
+# defaults file for aws_loadbalancer
+stack_state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+
+script_dir: "../../cloudformation/loadbalancing"
+# Stack name for load balancer
+elb_stack_name: CuSSP-internet-service-elb
+# Stack name of our network setup
+network_stack_name: CuSSP-network
+# Name of our Application Load Balancer
+elb_name: api-lb

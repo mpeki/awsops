@@ -1,0 +1,34 @@
+---
+# defaults file for aws_shared_services
+stack_state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+
+# Common network vars
+script_dir: "../../cloudformation/network"
+network_stack_name: CuSSP-network
+intranet_stack_name: CuSSP-intranet
+
+# RDS vars
+rdb_script_dir: "../../cloudformation/database"
+rds_subnet_stack_name: CuSSP-RDS-subnet
+rds_parametergroup_stack_name: CuSSP-RDS-parametergroup
+
+# Redis vars
+redis_script_dir: "../../cloudformation/elasticache"
+redis_subnet_stack_name: CuSSP-redis-subnet-sec
+redis_stack_name: CuSSP-redis
+redis_instance_type: cache.t2.micro
+
+# Active MQ vars
+mq_script_dir: "../../cloudformation/integration"
+mq_security_stack_name: CuSSP-MQ-security
+mq_setup_stack_name: CuSSP-MQ-setup
+mq_broker_name: CuSSP-MQ
+mq_instance_type: mq.t2.micro
+mq_dns_name: amq
+
+# Elasticsearch vars
+es_script_dir:  "../../cloudformation/elasticsearch"
+es_stack_name: CuSSP-elasticsearch
+es_role_stack_name: Cussp-elasticsearch-service-role
+es_instance_type: t3.small.elasticsearch
+

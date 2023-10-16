@@ -1,0 +1,49 @@
+---
+# tasks file for aws_rds
+# Obtain Admin sts token, then run the RDS cloudformation stack
+- name: Authenticate to sts
+  include_role:
+    name: aws_sts_login
+  vars:
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].secret_access_key }}"
+    assume_role_arn: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].role_name].role_arn }}"
+    assume_role_session_name: "ansible-{{ mode }}-{{ role_name }}"
+
+- name: "{{ mode }} RDS for {{ db_name }}"
+  cloudformation:
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    region: "{{ role_region }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    stack_name: "{{ rds_stack_name }}"
+    state: "{{ 'present' if mode == 'create' else 'absent' }}"
+    template: "{{ rds_template_dir }}/{{ rds_template_filename }}"
+    template_parameters:
+      ServiceName: "{{ rds_service_name }}"
+      NetworkStack: "{{ rds_network_stack }}"
+      DBParameterGroupStack: "{{ rds_db_parameter_group_stack }}"
+      DBSubnetStack: "{{ rds_db_subnet_stack }}"
+      DBUser: "{{ rds_db_user }}"
+      DBPassword: "{{ rds_db_password }}"
+      Environment: "{{ rds_environment }}"
+      DatabaseAllocatedStorage: "{{ rds_database_allocated_storage }}"
+      DatabaseInstanceType: "{{ rds_database_instance_type }}"
+      DatabaseEngineType: "{{ rds_database_engine_type }}"
+      DatabaseVersion: "{{ rds_database_version }}"
+
+- name: "create rds read replica {{ db_name }}"
+  cloudformation:
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    region: "{{ dr_role_region }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    stack_name: "{{ rds_stack_name }}"
+    state: present
+    template: "{{ rds_template_dir }}/{{ rds_replica_template_filename }}"
+    template_parameters:
+      ServiceName: "{{ rds_service_name }}"
+  when: rds_create_read_replica|bool
+  async: 3600
+  poll: 300
+

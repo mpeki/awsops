@@ -1,0 +1,55 @@
+#!/usr/bin/env groovy
+
+library(
+  identifier: 'cicd-commons@master',
+  retriever: modernSCM([
+    $class       : 'GitSCMSource',
+    remote       : 'https://git.tiatechnology.com/arc/bs-ci-lib.git',
+    credentialsId: 'jenkins-checkout-git.tiatechnology.com'
+  ])
+) _
+
+def userInput = [:]
+
+pipeline {
+  agent {
+    label 'docker'
+  }
+  environment {
+    UNICORN_HOME = "${WORKSPACE}"
+    AWS_SRV_OPS_HOME = "${WORKSPACE}/cloudformation/servicesetup"
+    AWS_MGT_OPS_HOME = "${WORKSPACE}/cloudformation/management"
+    AWS_CONFIG = "${WORKSPACE}/access/config/aws_accounts"
+  }
+
+  stages {
+    stage('Get input') {
+      steps {
+        withDevToolbox {
+            script {
+              List awsProfiles = listAwsProfiles()
+              def params = []
+              params += choice (name: "targetAccount", choices: awsProfiles, description: 'Select AWS account')
+              params += choice (name: "targetLb", choices: ['api-lb','api-lb-internal'], description: "Select target loadbalancer")
+              userInput = input message: 'Select target and lb', ok: 'Proceed!', parameters: params
+              println userInput
+            }
+        }
+      }
+    }
+    stage("Run"){
+      steps {
+        withDevToolbox {
+          dir("$AWS_MGT_OPS_HOME") {
+            sh "./alb-healthcheck.sh ${userInput.targetAccount} ${userInput.targetLb}"
+          }
+        }
+      }
+    }
+  }
+  post {
+    always {
+      deleteDir()
+    }
+  }
+}

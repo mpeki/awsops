@@ -1,0 +1,89 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Redis subnet/security -group for MicroServices"
+
+Parameters:
+  NetworkStack:
+    Type: String
+    Description: "Network stack to apply to."
+
+  IntranetStack:
+    Type: String
+    Description: "Intranet stack to apply to."
+
+Resources:
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: "Subnets for Redis Cluster"
+      SubnetIds:
+          # add the 3 Nodes (private) subnets for internal access
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetNodesAId
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetNodesBId
+        - Fn::ImportValue:
+            !Sub ${NetworkStack}-SubnetNodesCId
+
+  RedisVPCSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Ref AWS::StackName
+      GroupDescription: !Ref AWS::StackName
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcId
+
+  RedisVPCSecurityGroupEgressAllowAll:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref RedisVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "-1" # allow all traffic outbound
+
+  RedisVPCSecurityGroupEgressIntranetAllowAll:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref RedisVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+      IpProtocol: "-1" # allow all traffic outbound
+
+  # allow Redis to receive connections
+  RedisVPCSecurityGroupIngressAllow:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RedisVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "tcp"
+      FromPort: 6379
+      ToPort: 6379
+
+  RedisVPCSecurityGroupIngressAllowIntranet:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RedisVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+      IpProtocol: "tcp"
+      FromPort: 6379
+      ToPort: 6379
+
+Outputs:
+  RdisSubnetGroup:
+      Description : "Redis Subnet Group"
+      Value:  !Ref RedisSubnetGroup
+      Export:
+        Name: !Sub ${AWS::StackName}-RedisSubnetGroup
+
+  VPCSecurityGroup:
+      Description : "VPC Security Group"
+      Value:  !Ref RedisVPCSecurityGroup
+      Export:
+        Name: !Sub ${AWS::StackName}-VPCSecurityGroup

@@ -1,0 +1,136 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "ECS Service Roles"
+
+Parameters:
+  ConfigBucketName:
+    Type: "String"
+    Description: "Name of the configuration bucket"
+
+  SubDir:
+    Type: "String"
+    Description: "Allow access to this subdir of the configuration bucket"
+
+Resources:
+
+  # create a role for the ECS service itself
+  EcsServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: EcsServiceRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ecs.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        # allows the EC2 Container Service to manage resources like ELB for us
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole
+
+  # create a role to allow services to access configurations in our ops bucket
+  EcsTaskRoleForServices:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: EcsTaskRoleForServices
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ecs-tasks.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+
+      # Create an INLINE policy specific to this role
+      Policies:
+        - PolicyName: "EnableServicesOperations"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # tasks need to pull configs from s3
+              - Effect: "Allow"
+                Action: "s3:GetObject"
+                Resource: !Join [ "", ["arn:aws:s3:::", !Ref ConfigBucketName, "/", !Ref SubDir, "/*"]]
+
+              # tasks need to manage topics
+              - Effect: Allow
+                Action:
+                  - sns:ConfirmSubscription
+                  - sns:CreateTopic
+                  - sns:GetEndpointAttributes
+                  - sns:GetSubscriptionAttributes
+                  - sns:GetTopicAttributes
+                  - sns:ListSubscriptions
+                  - sns:ListSubscriptionsByTopic
+                  - sns:ListTopics
+                  - sns:Subscribe
+                  - sns:Unsubscribe
+                  - sns:Publish
+                Resource:
+                  - "*"
+
+              # tasks need to manage queues
+              - Effect: Allow
+                Action:
+                  - sqs:CreateQueue
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:GetQueueUrl
+                  - sqs:ListQueues
+                  - sqs:ReceiveMessage
+                  - sqs:SendMessage
+                Resource:
+                  - "*"
+
+              # tasks need to read CWL
+              - Effect: Allow
+                Action:
+                  - logs:Describe*
+                  - logs:Get*
+                  - logs:List*
+                  - logs:StartQuery
+                  - logs:StopQuery
+                  - logs:TestMetricFilter
+                  - logs:FilterLogEvents
+                Resource:
+                  - "*"
+
+              # tasks need to operate S3
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:CreateBucket
+                  - s3:ListBucket
+                  - s3:DeleteObject
+                Resource:
+                  - "*"
+
+              # tasks need to operate X-Ray
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: "*"
+
+              # tasks need to access Secrets Manager
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - "*"
+
+              # tasks need to be able to send emails
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource:
+                  - "*"

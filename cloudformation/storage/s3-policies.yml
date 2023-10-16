@@ -1,0 +1,215 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Account Policies for admin S3 Buckets"
+
+Parameters:
+  BucketName:
+    Type: "String"
+    Description: "Must be globally unique"
+
+  BucketStack:
+    Type: "String"
+    Description: "Bucket stack to apply to."
+
+Resources:
+  BucketPolicyForGeneralOperations:
+    # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-policy.html
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket:
+        Fn::ImportValue:
+          !Join [ "", [!Ref BucketStack, "-", !Ref BucketName]]
+      PolicyDocument:
+        # allow accounts to read from this bucket
+        Statement:
+        # Development account
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::281283362525:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "dev", "/*"]]
+
+        # Demo account
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::311542012115:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "demo", "/*"]]
+
+        # SBHDemo account
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::485853774387:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "sbhdemo", "/*"]]
+
+        # SBHTest account
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::895076489986:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "sbhtest", "/*"]]
+
+        # M1 account
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::676835235756:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "m1", "/*"]]
+
+        # rnddev account
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::515257242789:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "rnddev", "/*"]]
+
+  BucketPolicyForConfigs:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket:
+        Fn::ImportValue:
+          !Join [ "", [!Ref BucketStack, "-", !Ref BucketName, "-configs"]]
+      PolicyDocument:
+        # allow accounts to read from this bucket
+        Statement:
+        # Development account
+        - Effect: "Allow"
+          Action: "s3:ListBucket"
+          Principal:
+            AWS: "arn:aws:iam::281283362525:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
+          Condition:
+            StringLike:
+              s3:prefix: "dev/*"
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::281283362525:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "dev", "/*"]]
+
+        # Demo account
+        - Effect: "Allow"
+          Action: "s3:ListBucket"
+          Principal:
+            AWS: "arn:aws:iam::311542012115:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
+          Condition:
+            StringLike:
+              s3:prefix: "demo/*"
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::311542012115:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "demo", "/*"]]
+
+        # SBHDemo account
+        - Effect: "Allow"
+          Action: "s3:ListBucket"
+          Principal:
+            AWS: "arn:aws:iam::485853774387:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
+          Condition:
+            StringLike:
+              s3:prefix: "sbhdemo/*"
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::485853774387:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "sbhdemo", "/*"]]
+
+        # SBHTest account
+        - Effect: "Allow"
+          Action: "s3:ListBucket"
+          Principal:
+            AWS: "arn:aws:iam::895076489986:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
+          Condition:
+            StringLike:
+              s3:prefix: "sbhtest/*"
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::895076489986:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "sbhtest", "/*"]]
+
+        # M1 account
+        - Effect: "Allow"
+          Action: "s3:ListBucket"
+          Principal:
+            AWS: "arn:aws:iam::676835235756:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
+          Condition:
+            StringLike:
+              s3:prefix: "m1/*"
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::676835235756:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "m1", "/*"]]
+
+        # rnddev account
+        - Effect: "Allow"
+          Action: "s3:ListBucket"
+          Principal:
+            AWS: "arn:aws:iam::515257242789:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
+          Condition:
+            StringLike:
+              s3:prefix: "rnddev/*"
+        - Effect: "Allow"
+          Action: "s3:GetObject"
+          Principal:
+            AWS: "arn:aws:iam::515257242789:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "rnddev", "/*"]]
+
+  BucketPolicyForBackups:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket:
+        Fn::ImportValue:
+          !Join [ "", [!Ref BucketStack, "-", !Ref BucketName, "-backups"]]
+      PolicyDocument:
+        # allow accounts to upload to this bucket
+        Statement:
+        # Development account
+        - Effect: "Allow"
+          Action: "s3:PutObject"
+          Principal:
+            AWS: "arn:aws:iam::281283362525:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "dev", "/*"]]
+
+        # Demo account
+        - Effect: "Allow"
+          Action: "s3:PutObject"
+          Principal:
+            AWS: "arn:aws:iam::311542012115:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "demo", "/*"]]
+
+        # SBHDemo account
+        - Effect: "Allow"
+          Action: "s3:PutObject"
+          Principal:
+            AWS: "arn:aws:iam::485853774387:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "sbhdemo", "/*"]]
+
+        # SBHTest account
+        - Effect: "Allow"
+          Action: "s3:PutObject"
+          Principal:
+            AWS: "arn:aws:iam::895076489986:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "sbhtest", "/*"]]
+
+        # M1 account
+        - Effect: "Allow"
+          Action: "s3:PutObject"
+          Principal:
+            AWS: "arn:aws:iam::676835235756:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "m1", "/*"]]
+
+        # rnddev account
+        - Effect: "Allow"
+          Action: "s3:PutObject"
+          Principal:
+            AWS: "arn:aws:iam::515257242789:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "rnddev", "/*"]]

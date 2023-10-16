@@ -1,0 +1,289 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Service setup for load balancer"
+
+Parameters:
+  NetworkStack:
+    Type: "String"
+    Description: "Network stack to apply to."
+
+  EcsStack:
+    Type: "String"
+    Description: "ECS stack to apply to."
+
+  EcsCluster:
+    Type: "String"
+    Description: "The ECS cluster for services"
+
+  ElbForServices:
+    Type: "String"
+    Description: "The ARN of load balancer"
+
+  ElbListener:
+    Type: "String"
+    Description: "The ARN of load  balancer listener"
+
+  RulePriority:
+    Type: "String"
+    Description: "The priority of load balancer listener rule"
+
+  EcsTaskRoleForServices:
+    Type: "String"
+    Description: "The role used for tasks"
+
+  EcsExecutionRoleForServices:
+    Type: "String"
+    Description: "The role used for execution (used by Fargate)"
+
+  EcsServiceRole:
+    Type: "String"
+    Description: "The role used for service"
+
+  TargetProfile:
+    Type: "String"
+    Description: "The profile"
+
+  ActiveProfiles:
+    Type: "String"
+    Description: "The active profiles - determines which configurations are fetched from config server"
+    Default: "default,prod"
+
+  ConfigServerURL:
+    Type: "String"
+    Description: "The URL for the config server"
+    Default: http://api-lb-internal.cussp.local/config
+
+  ConfigLabels:
+    Type: "String"
+    Description: "The active configuration labels - determines which configurations are fetched from config server"
+    Default: "master"
+
+  ServiceName:
+    Type: "String"
+    Description: "Service names must be unique within a cluster, but you can have similarly named services in multiple clusters within a region or across multiple regions."
+
+  ServiceImage:
+    Type: "String"
+    Description: "The image used to start a service."
+
+  SourceRevision:
+    Type: "String"
+    Description: "Source repository revision number."
+
+  ServiceCpu:
+    Type: "Number"
+    Default: 100
+    Description: "The minimum number of CPU units to reserve for the service."
+
+  ServiceMemory:
+    Type: "Number"
+    Default: 768
+    Description: "The number of MiB of memory to reserve for the service."
+
+  ServicePort:
+    Type: "Number"
+    Description: "The port number on the service bound to the host port.."
+
+  ServicePath:
+    Type: "String"
+    Description: "Part of a single path pattern - e.g.  '/<ServicePath>/*'"
+
+  ServiceDesiredCount:
+    Type: "Number"
+    Description: "The number of simultaneous tasks that you want to run on the cluster.."
+
+  LaunchType:
+    Type: String
+    Default: "EC2"
+    AllowedValues: ["EC2", "FARGATE"]
+    Description: (Optional) The launchtype - can be EC2 or Fargate
+
+  HealthCheckPath:
+    Type: String
+    Default: "health"
+    Description: "Path for health check"
+
+  KeyStoreUrl:
+    Type: String
+    Default: ""
+    Description: SPD keystore URL
+
+  HealthCheckProtocol:
+    Type: String
+    Default: "HTTP"
+    Description: "health check endpoint"
+
+  TargetGroupPort:
+    Type: Number
+    Default: 80
+    Description: target group port either 443/80
+
+  TargetGroupProtocol:
+    Type: String
+    Default: "HTTP"
+    Description: protocol to use when connecting over https
+
+  GitURL:
+    Type: String
+    Default: "git@git.tiatechnology.com:environment/config/server-repo.git"
+    Description: "Where the config server should pull it's base configuration from"
+
+  SecretArn:
+    Type: String
+    Description: "ARN of artifactory secret in Secret Manager"
+    Default: ''
+
+
+Conditions:
+  LaunchTypeFargate: !Equals [!Ref 'LaunchType', 'FARGATE']
+  CreateLoadBalancerResources: !Not [!Equals [!Ref ElbForServices, '']]
+  CreateListenerResource: !And
+    - !Not [!Equals [!Ref ElbForServices, '']]
+    - !Equals [!Ref ElbListener, '']
+  UsePrivateRepo: !Not [!Equals [!Ref SecretArn, '']]
+
+Resources:
+  CloudwatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [/ecs/taas/, !Ref ServiceName]]
+      RetentionInDays: 14
+
+  ServiceTaskdefinition:
+    Type: "AWS::ECS::TaskDefinition"
+    Properties:
+      Family: !Join ['-', [taas, !Ref ServiceName]]
+      Cpu: !If ['LaunchTypeFargate', !Ref ServiceCpu, !Ref "AWS::NoValue"]
+      Memory: !If ['LaunchTypeFargate', !Ref ServiceMemory, !Ref "AWS::NoValue"]
+      NetworkMode: !If ['LaunchTypeFargate', awsvpc, bridge]
+      RequiresCompatibilities: !If ['LaunchTypeFargate', [FARGATE], [EC2]]
+      TaskRoleArn: !Ref EcsTaskRoleForServices
+      ExecutionRoleArn: !If [LaunchTypeFargate, !Ref EcsExecutionRoleForServices, !Ref "AWS::NoValue"]
+      ContainerDefinitions:
+        - Name: !Ref ServiceName
+          Image: !Ref ServiceImage
+          RepositoryCredentials: !If
+          - UsePrivateRepo
+          - CredentialsParameter: !Ref SecretArn
+          - !Ref "AWS::NoValue"
+          Cpu: !If [LaunchTypeFargate, !Ref "AWS::NoValue", !Ref ServiceCpu]
+          Memory: !If [LaunchTypeFargate, !Ref "AWS::NoValue", !Ref ServiceMemory]
+          Environment:
+            - Name: TARGET_PROFILE
+              Value: !Ref TargetProfile
+            - Name: ACTIVE_PROFILES
+              Value: !Ref ActiveProfiles
+            - Name: SPRING_PROFILES_ACTIVE
+              Value: !Ref ActiveProfiles
+            - Name: spring_profiles_active
+              Value: !Ref ActiveProfiles
+            - Name: spring_cloud_config_uri
+              Value: !Ref ConfigServerURL
+            - Name: CONFIG_SERVER_URL
+              Value: !Ref ConfigServerURL
+            - Name: spring_cloud_config_label
+              Value: !Ref ConfigLabels
+            - Name: CONFIG_LABELS
+              Value: !Ref ConfigLabels
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
+            - Name: spring_application_name
+              Value: !Ref ServiceName
+            - Name: AWS_XRAY_DAEMON_ADDRESS
+              Value: xray-daemon.services.cussp.local:2000
+            - Name: KEYSTORE_URL
+              Value: !Ref KeyStoreUrl
+            - Name: GIT_URL
+              Value: !Ref GitURL
+          DockerLabels:
+            com.tiatechnology.revision : !Ref SourceRevision
+          Essential: "true"
+          PortMappings:
+            - ContainerPort: !Ref ServicePort
+              # The host port number on the container instance that you want to reserve for your container.
+              # You can specify a non-reserved host port for your container port mapping, omit the host port, or set the host port to 0.
+              # If you specify a container port but no host port, your container host port is assigned automatically .
+              HostPort: !If ['LaunchTypeFargate', !Ref ServicePort, 0]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref CloudwatchLogsGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !If ['LaunchTypeFargate', ecs, !Ref "AWS::NoValue"]
+
+  # target group for service
+  TargetGroupForService:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: CreateLoadBalancerResources
+    Properties:
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: !Ref HealthCheckProtocol
+      HealthCheckTimeoutSeconds: 2
+      HealthyThresholdCount: 2
+      TargetType: !If ['LaunchTypeFargate', ip, instance]
+      Matcher:
+        HttpCode: 200
+      Name: !Join ['-', [!If ['LaunchTypeFargate', fargate, ec2], !Ref ServiceName]]
+      Port: !Ref TargetGroupPort
+      Protocol: !Ref TargetGroupProtocol
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 20
+      UnhealthyThresholdCount: 3
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcId
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Ref ServiceName
+      Cluster: !Ref EcsCluster
+      LaunchType: !If ['LaunchTypeFargate', FARGATE, EC2]
+      DesiredCount: !Ref ServiceDesiredCount
+      HealthCheckGracePeriodSeconds: 1500
+      NetworkConfiguration:
+        !If
+        - LaunchTypeFargate
+        - AwsvpcConfiguration:
+            SecurityGroups:
+              - Fn::ImportValue:
+                  !Sub ${EcsStack}-EcsSecurityGroup
+            Subnets:
+              - Fn::ImportValue:
+                  !Sub ${NetworkStack}-SubnetNodesAId
+              - Fn::ImportValue:
+                  !Sub ${NetworkStack}-SubnetNodesBId
+              - Fn::ImportValue:
+                  !Sub ${NetworkStack}-SubnetNodesCId
+        - !Ref "AWS::NoValue"
+      LoadBalancers:
+        !If
+        - CreateLoadBalancerResources
+        - - ContainerName: !Ref ServiceName
+            ContainerPort: !Ref ServicePort
+            TargetGroupArn: !Ref TargetGroupForService
+        - !Ref "AWS::NoValue"
+      Role:
+        !If
+        - LaunchTypeFargate
+        - !Ref "AWS::NoValue"
+        - !If [CreateLoadBalancerResources, !Ref EcsServiceRole, !Ref "AWS::NoValue"]
+      TaskDefinition: !Ref ServiceTaskdefinition
+
+  # create a listener rule that ROUTES to service
+  ListenerRuleForService:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: CreateLoadBalancerResources
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupForService
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - !Join ['', ["/", !Ref ServicePath, "/*"]]
+      # ListenerArn: !If [CreateListenerResource, !Ref ListenerForElbForServices, !Ref ElbListener]
+      ListenerArn: !Ref ElbListener
+      Priority: !Ref RulePriority

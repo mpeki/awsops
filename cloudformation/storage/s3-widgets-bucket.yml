@@ -1,0 +1,68 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "S3 bucket and public read policy for widgets content"
+
+Parameters:
+  BucketName:
+    Type: "String"
+    Description: "Must be globally unique"
+
+Resources:
+  # Create a bucket to hold content for widgets
+  BucketForWidgetsContents:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Ref BucketName # must be globally unique
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Enabled
+
+  BucketPolicyForWidgetContents:
+    # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-policy.html
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref BucketForWidgetsContents
+      PolicyDocument:
+        Statement:
+          # allow cloudfront user to read from this bucket
+          - Action: "s3:GetObject"
+            Effect: "Allow"
+            Principal:
+              AWS: arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity E1LQ2KIYQ93IKP
+            Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/*"]]
+
+  WidgetsBucketAccessPolicy: # grant access to widgets
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      ManagedPolicyName: "WidgetsBucketAccess"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ConsoleAccess
+            Effect: Allow
+            Action:
+              - s3:GetAccountPublicAccessBlock
+              - s3:GetBucketAcl
+              - s3:GetBucketLocation
+              - s3:GetBucketPolicyStatus
+              - s3:GetBucketPublicAccessBlock
+              - s3:ListAllMyBuckets
+            Resource: "*"
+          - Sid: ListObjectsInBucket
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+            Resource:
+              - !Join [ "", ["arn:aws:s3:::", !Ref BucketName]]
+          - Sid: AllObjectActions
+            Effect: Allow
+            Action: s3:*Object
+            Resource:
+              - !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/*"]]
+      Groups:
+        - Developers

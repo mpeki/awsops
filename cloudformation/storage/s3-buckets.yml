@@ -1,0 +1,63 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "S3 Buckets for admin account"
+
+Parameters:
+  BucketName:
+    Type: "String"
+    Description: "Must be globally unique"
+
+Resources:
+  BucketForGeneralOperations:
+    # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
+    # this will be used for bootstrapping and various other scripts
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub ${BucketName} # must be globally unique
+
+  # Create a bucket to hold configs *which may include credentials*
+  BucketForConfigs:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub ${BucketName}-configs # must be globally unique
+
+  BucketPolicyForConfigs:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref BucketForConfigs
+      PolicyDocument:
+        Statement:
+            # prevent uploads if server side encryption was not set
+          - Action: "s3:PutObject"
+            Effect: "Deny"
+            Principal: "*"
+            Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/*"]]
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption: "AES256"
+
+  # Create a bucket to hold backups
+  BucketForBackups:
+    # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub ${BucketName}-backups # must be globally unique
+
+Outputs:
+  BucketForGeneralOperationsId:
+      Description : "Bucket Id For General Operations"
+      Value:  !Ref BucketForGeneralOperations
+      Export:
+        Name: !Sub ${AWS::StackName}-${BucketName}
+
+  BucketForConfigsId:
+      Description : "Bucket Id For Configs"
+      Value:  !Ref BucketForConfigs
+      Export:
+        Name: !Sub ${AWS::StackName}-${BucketName}-configs
+
+  BucketForBackupsId:
+      Description : "Bucket Id For Backups"
+      Value:  !Ref BucketForBackups
+      Export:
+        Name: !Sub ${AWS::StackName}-${BucketName}-backups

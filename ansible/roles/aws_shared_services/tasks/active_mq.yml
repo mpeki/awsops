@@ -1,0 +1,33 @@
+---
+- name: "{{ mode }} active-mq security"
+  cloudformation:
+    stack_name: "{{ mq_security_stack_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ mq_script_dir }}/activemq-security.yml"
+    template_parameters:
+      NetworkStack: "{{ network_stack_name }}"
+      IntranetStack: "{{ intranet_stack_name }}"
+
+- name: "{{ mode }} active-mq setup"
+  cloudformation:
+    stack_name: "{{ mq_setup_stack_name }}"
+    state: "{{ stack_state }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ mq_script_dir }}/activemq-setup.yml"
+    template_parameters:
+      NetworkStack: "{{ network_stack_name }}"
+      MQSecurityStackName: "{{ mq_security_stack_name }}"
+      MQBrokerName: "{{ mq_broker_name }}"
+      MQinstanceType: "{{ mq_instance_type }}"
+      MQDNSName: "{{ mq_dns_name }}"
+      MQUserName: "{{ mq_user }}"
+      MQPassword: "{{ mq_password }}"
+      MQSecurityGroupId: ""
+  no_log: true

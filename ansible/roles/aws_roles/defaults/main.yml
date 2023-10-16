@@ -1,0 +1,9 @@
+---
+# defaults file for aws_roles
+stack_state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+
+script_dir: "../../cloudformation/access"
+fargate_stack_name: CuSSP-roles-for-fargate
+ecs_stack_name: CuSSP-roles-for-ecs
+config_bucket_name: cussp-configs
+ec2_stack_name: CuSSP-roles-for-ec2

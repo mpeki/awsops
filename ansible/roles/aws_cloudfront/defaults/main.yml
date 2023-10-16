@@ -1,0 +1,18 @@
+---
+stack_state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+
+script_dir: "../../cloudformation/web"
+# cloudfront stack name
+cf_prefix_stack_name: cloudfront-distribution
+
+
+#Default aws region which contains the acm imported certificate
+aws_certificate_region: us-east-1
+# Default domain also hosted zone name
+certificate_domain_name: "*.theinsuranceapplication.com"
+# route53 defaults
+route53_account_role_name: devops
+r53_prefix_stack_name: route53
+
+
+

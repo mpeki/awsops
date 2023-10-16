@@ -1,0 +1,31 @@
+---
+# tasks file for aws_shared_services
+- name: Authenticate to sts
+  import_role:
+    name: aws_sts_login
+  vars:
+    admin_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].access_key }}"
+    admin_secret_access_key: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].admin_role_name].secret_access_key }}"
+    assume_role_arn: "{{ aws_credentials_vault[cust_config[cust_name][env_name]['aws_profile'].role_name].role_arn }}"
+    assume_role_session_name: "ansible-{{ mode }}-{{ role_name }}"
+    role_region: "{{ role_region }}"
+
+- name: RDS
+  import_tasks: rds.yml
+  when: service == "rds"
+
+- name: Redis
+  import_tasks: redis.yml
+  when: service == "redis"
+
+- name: Active MQ
+  import_tasks: active_mq.yml
+  when: service == "activemq"
+
+- name: Resource access policy
+  import_tasks: resource_access_policy.yml
+  when: service == "policy"
+
+- name: Elastic search
+  import_tasks: elasticsearch.yml
+  when: service == "elasticsearch"

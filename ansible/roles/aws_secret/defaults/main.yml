@@ -1,0 +1,7 @@
+---
+# defaults file for aws secrets
+script_dir: "../../cloudformation/access"
+stack_name: "artifactory-secrets-setup"
+secret_id: "artifactory-ro"
+stack_state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+task_execution_role: "ecsTaskExecutionRole"

@@ -1,0 +1,119 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "ActiveMQ security -group for Microservice"
+
+Parameters:
+  NetworkStack:
+    Type: String
+    Description: "Network stack to apply to."
+
+  IntranetStack:
+    Type: String
+    Description: "Intranet stack to apply to."
+
+Resources:
+  MicroserviceVPCSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Ref "AWS::StackName"
+      GroupDescription: !Ref "AWS::StackName"
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcId
+
+  MicroServiceVPCSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "-1" # allow all traffic outbound
+
+  MicroServiceVPCSecurityGroupEgressIntranet:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+      IpProtocol: "-1" # allow all traffic outbound
+
+  # allow Web Console to receive connections
+  MicroServiceVPCSecurityGroupIngressAllowIntranetWebConsole:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+      IpProtocol: "tcp"
+      FromPort: 8162
+      ToPort: 8162
+
+  # allow OpenWire protocol
+  MicroServiceVPCSecurityGroupIngressAllowOpenWire:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "tcp"
+      FromPort: 61617
+      ToPort: 61617
+
+  # allow AMQP protocol
+  MicroServiceVPCSecurityGroupIngressAllowAMQP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "tcp"
+      FromPort: 5671
+      ToPort: 5671
+
+  # allow STOMP protocol
+  MicroServiceVPCSecurityGroupIngressAllowSTOMP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "tcp"
+      FromPort: 61614
+      ToPort: 61614
+
+  # allow MQTT protocol
+  MicroServiceVPCSecurityGroupIngressAllowMQTT:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "tcp"
+      FromPort: 8883
+      ToPort: 8883
+
+  # allow WSS protocol
+  MicroServiceVPCSecurityGroupIngressAllowWSS:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MicroserviceVPCSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "tcp"
+      FromPort: 61619
+      ToPort: 61619
+
+Outputs:
+  VPCSecurityGroup:
+      Description : "VPC Security Group"
+      Value:  !Ref MicroserviceVPCSecurityGroup
+      Export:
+        Name: !Sub ${AWS::StackName}-VPCSecurityGroup

@@ -1,0 +1,74 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Users for BI Team"
+
+Resources:
+  userEigminasDagys:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "eda"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - BITeam
+
+  userRamunePaceviciute:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "rpa"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - BITeam
+
+  userRemigijusKilas:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "rki"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - BITeam
+
+  userKristinaEimutiene:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "kei"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - BITeam
+
+  userGediminasKarveckas:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "gka"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - BITeam
+
+  userVytautasThienel:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "vth"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - BITeam
+
+  userLauraDage:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "lda"
+      LoginProfile:
+        Password: "!cH4n63M3N0w!"
+        PasswordResetRequired: True
+      Groups:
+        - BITeam

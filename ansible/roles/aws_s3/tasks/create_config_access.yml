@@ -1,0 +1,32 @@
+---
+- name: Config-server access setup on admin account
+  block:
+  - name: Create environment specific ssh key dir
+    file:
+      path: "{{ role_path }}/files/{{ cust_config[cust_name][env_name].account }}"
+      state: directory
+    changed_when: false
+
+  - name: Copy contents of encrypted key to files
+    copy:
+      content: "{{ config_cert }}"
+      dest: "{{ role_path }}/files/{{ cust_config[cust_name][env_name].account }}/id_rsa"
+    changed_when: false
+
+  - name: Upload config-server git ssh key
+    aws_s3:
+      aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+      aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+      security_token: "{{ assumed_role.sts_creds.session_token }}"
+      bucket: cussp-configs
+      object: "/{{ cust_config[cust_name][env_name].account }}/access/config-server/id_rsa"
+      src: "{{ role_path }}/files/{{ cust_config[cust_name][env_name].account }}/id_rsa"
+      overwrite: different
+      mode: put
+
+  always:
+    - name: Clean config-server ssh git keys
+      file:
+        state: absent
+        path: "{{ role_path }}/files/{{ cust_config[cust_name][env_name].account }}/"
+      changed_when: false

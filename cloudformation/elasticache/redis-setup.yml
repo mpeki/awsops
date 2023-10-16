@@ -1,0 +1,76 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Redis setup for Microservices"
+
+Parameters:
+  NetworkStack:
+    Type: String
+    Description: "Network stack to apply to."
+
+  RedisSubnetStack:
+    Type: String
+    Description: "Network stack to apply to."
+
+  RedisNodeType:
+    Default: cache.t2.micro
+    AllowedValues:
+        - cache.t2.micro
+        - cache.t2.small
+        - cache.t2.medium
+        - cache.m5.large
+        - cache.m4.large
+        - cache.r4.large
+        - cache.r5.large
+    Description: The instance type to use for Redis.
+    Type: String
+
+Resources:
+  MicroServiceRedisCluster:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: RedisCluster
+      AtRestEncryptionEnabled: true
+      TransitEncryptionEnabled: true
+      AutomaticFailoverEnabled: false
+      CacheNodeType: !Ref RedisNodeType
+      CacheSubnetGroupName:
+        Fn::ImportValue:
+          !Sub ${RedisSubnetStack}-RedisSubnetGroup
+      Engine: redis
+      NumNodeGroups: 1
+      ReplicasPerNodeGroup: 0
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub ${RedisSubnetStack}-VPCSecurityGroup
+      PreferredMaintenanceWindow: sun:01:00-sun:03:00
+      SnapshotRetentionLimit: 5
+      SnapshotWindow: 03:00-06:00
+      Tags:
+        - Key: Scope
+          Value: private
+        - Key: Purpose
+          Value: redis
+
+  # Register Redis as a known DNS alias entry in the private hosted zone
+  InternalRedisDNS:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: MicroServiceRedisCluster
+    Properties:
+      HostedZoneName:
+        !Join
+          - ''
+          - - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+            - '.'
+      Comment: DNS for Redis instance.
+      RecordSets:
+      - Name:
+          !Join
+            - ''
+            - - 'redis'
+              - '.'
+              - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+              - '.'
+        Type: CNAME
+        TTL: 300
+        ResourceRecords:
+          - Fn::GetAtt: [MicroServiceRedisCluster, PrimaryEndPoint.Address]

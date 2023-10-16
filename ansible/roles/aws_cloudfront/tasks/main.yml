@@ -1,0 +1,3 @@
+---
+- name: cloudformation and route 53
+  import_tasks: "{{ mode }}_cloudfront_distribution.yml"

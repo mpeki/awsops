@@ -1,0 +1,60 @@
+---
+- name: check for aws
+  command:  /tmp/aws-cli/v2/current/bin/aws --version
+  register: aws_version
+  ignore_errors: yes
+
+- name: install aws
+  block:
+    - name: get cli
+      get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        dest: "/tmp/awscliv2.zip"
+        mode: "0777"
+
+    - name: unzip
+      unarchive:
+        src: "/tmp/awscliv2.zip"
+        dest: "/tmp"
+        copy: no
+        mode: '0777'
+
+    - name: install awscli
+      shell: "/tmp/aws/install -i /tmp/aws-cli"
+  when: aws_version.failed
+
+- name: get vpc id
+  shell: "/tmp/aws-cli/v2/current/bin/aws ec2 describe-vpcs --filters Name=tag:Name,Values={{ vpc_network_stack_name }} --query 'Vpcs[].VpcId' --output text"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ assumed_role.sts_creds.access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
+    AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
+    AWS_DEFAULT_REGION: "{{ role_region }}"
+  register: vpc_fact
+
+- name: get route table ids
+  shell: "/tmp/aws-cli/v2/current/bin/aws ec2 describe-route-tables --filters Name=vpc-id,Values={{ vpc_fact.stdout }} Name=association.main,Values=false --query 'RouteTables[].RouteTableId' --output text"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ assumed_role.sts_creds.access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
+    AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
+    AWS_DEFAULT_REGION: "{{ role_region }}"
+  register: rtb_ids
+
+- name: "{{ mode }} stack vpc endpoint - {{cust_name }}{{ env_name }}"
+  cloudformation:
+    stack_name: "vpc-endpoint-s3-setup"
+    state: "{{ 'absent' if mode|lower == 'delete' else 'present' }}"
+    aws_access_key: "{{ assumed_role.sts_creds.access_key }}"
+    aws_secret_key: "{{ assumed_role.sts_creds.secret_key }}"
+    security_token: "{{ assumed_role.sts_creds.session_token }}"
+    region: "{{ role_region }}"
+    template: "{{ script_dir }}/vpce-s3.yml"
+    template_parameters:
+      VpcID: "{{ vpc_fact.stdout}}"
+      RouteTableIds: "{{ rtb_ids.stdout|replace('\t',',') }}"
+
+- name: clean up aws-cli
+  file:
+    path: /tmp/aws-cli
+    state: absent

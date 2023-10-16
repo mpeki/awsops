@@ -1,0 +1,29 @@
+---
+# AWS s3, playbook can be used to both Create or delete the s3 stacks. Passing either Create or delete as an extra var.
+- name: AWS S3 set up
+  hosts: localhost
+  vars_files:
+    - "{{ '../vars/cust/cust_' + cust_name + '.yml'}}"
+    - "../vars/aws/accounts.yml"
+  vars:
+    var_role_region: "{{ cust_config[cust_name][env_name]['aws_profile'].region }}"
+
+  tasks:
+    - name: Validate cust_name/env_name
+      assert:
+        that:
+          - cust_name is defined
+          - env_name is defined
+        fail_msg: "vars 'cust_name' and 'env_name' are required"
+
+    - name: Validate mode
+      assert:
+        that:
+          - "mode == 'create' or  mode == 'delete'"
+        fail_msg: "mode var must be either 'create' or 'delete'. ie -e 'mode=create'"
+
+    - name: "{{ mode }} s3 setup for aws"
+      include_role:
+        name: aws_s3
+      vars:
+        role_region: "{{ var_role_region }}"

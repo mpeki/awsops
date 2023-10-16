@@ -1,0 +1,158 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "RDS setup for Microservices"
+
+Parameters:
+  NetworkStack:
+    Type: String
+    Description: "Network stack to apply to."
+
+  DBParameterGroupStack:
+    Type: String
+    Description: "DB Parameter Group stack to apply to."
+
+  DBSubnetStack:
+    Type: String
+    Description: "DB subnet stack to apply to."
+
+  Environment:
+    Type: String
+    AllowedValues:
+      - "dev"
+      - "prod"
+
+  DatabaseAllocatedStorage:
+    Default: "20"
+    Description: The allocated storage to use for the database.
+    Type: String
+
+  DatabaseInstanceType:
+    Default: db.t3.micro
+    AllowedValues:
+        - db.t3.micro
+        - db.t3.small
+        - db.t3.medium
+        - db.t3.large
+        - db.m4.large
+        - db.m5.large
+        - db.r4.large
+        - db.r5.large
+    Description: The instance type to use for the database.
+    Type: String
+
+  DatabaseEngineType:
+    Default: mysql
+    AllowedValues:
+        - mysql
+        - postgres
+        - aurora-postgresql
+        - aurora-mysql
+    Description: The Engine type to use for the database.
+    Type: String
+
+  DatabaseVersion:
+    Default: "5.7"
+    Description: The Engine version to use for the database.
+    Type: String
+    AllowedValues:
+      - "8.0.19"
+      - "5.7"
+
+  ServiceName:
+    AllowedValues:
+      - "users-api"
+      - "claims-api"
+      - "tia-claims-adapter"
+      - "trd-api"
+      - "communications-service"
+      - "brd-scheduler"
+      - "bs-spd-service-api"
+      - "ds-ui-configuration"
+      - "auth0-user-details"
+    Type: String
+    Description: "DB for this service"
+
+  DBUser:
+    Type: String
+    Description: "Master user for this DB"
+
+  DBPassword:
+    NoEcho: true
+    Type: String
+    MinLength: 8
+    Description: "Master password for this DB"
+
+Conditions:
+  # test whether Environment==prod
+  # if so we will deploy RDS in MultiAZ
+  CreateProdResources: !Equals [!Ref Environment, "prod"]
+  # test whether Engine startswith aurora
+  # if so we will also create cluster
+  CreateAuroraResources: !Equals [!Select [0, !Split [ '-', !Ref DatabaseEngineType ] ], "aurora"]
+  Version8: !Equals [!Select [0, !Split [ '.', !Ref DatabaseVersion] ], "8"]
+
+Resources:
+  MicroServiceDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Join ['-', [!Ref ServiceName, "db"]]
+      DBName: !Join ['', [!Ref DBUser, "DB"]]
+      DBSubnetGroupName:
+        Fn::ImportValue:
+          !Sub ${DBSubnetStack}-DbSubnetGroup
+      VPCSecurityGroups:
+        - Fn::ImportValue:
+            !Sub ${DBSubnetStack}-VPCSecurityGroup
+      DBInstanceClass: !Ref DatabaseInstanceType
+      Engine:
+        Ref: DatabaseEngineType
+      EngineVersion:
+        Ref: DatabaseVersion
+      AllocatedStorage:
+        Ref: DatabaseAllocatedStorage
+      DBParameterGroupName:
+        Fn::ImportValue:
+          Fn::Sub:
+          - "${DBParameterGroupStack}-DBParameterGroup${Family}"
+          - DBParameterGroupStack: !Ref DBParameterGroupStack
+            Family: !If ["Version8", "8", "" ]
+      StorageType: gp2
+      MultiAZ: !If [CreateProdResources, true, false]
+      BackupRetentionPeriod: 30
+      StorageEncrypted: true
+      PubliclyAccessible: false
+      MasterUsername:
+        Ref: DBUser
+      MasterUserPassword:
+        Ref: DBPassword
+      Tags:
+        - Key: Scope
+          Value: private
+        - Key: Purpose
+          Value: db
+        - Key: Service
+          Value: !Ref ServiceName
+
+  # Register RDS as a known DNS alias entry in the private hosted zone
+  InternalRDSDNS:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: MicroServiceDB
+    Properties:
+      HostedZoneName:
+        !Join
+          - ''
+          - - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+            - '.'
+      Comment: DNS for RDS instance.
+      RecordSets:
+      - Name:
+          !Join
+            - ''
+            - - !Join ['-', [!Ref ServiceName, "db"]]
+              - '.'
+              - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+              - '.'
+        Type: CNAME
+        TTL: "300"
+        ResourceRecords:
+          - Fn::GetAtt: [MicroServiceDB, Endpoint.Address]

@@ -1,0 +1,229 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: ElasticsearchDomain resource
+Parameters:
+  EnforceSSL:
+    Type: String
+    Description: Enforce Access through https
+  NodeToNodeEncrypted:
+    Type: String
+    Description: Use node to node encryption
+  EncryptedAtRest:
+    Type: String
+    Description: Encrypt data at rest
+  DomainName:
+    Description: User defined Elasticsearch Domain name.
+    Type: String
+  ElasticsearchVersion:
+    Description: User defined Elasticsearch Version
+    Type: String
+    Default: 7.8
+  InstanceType:
+    Type: String
+    Default: t3.small.elasticsearch
+    AllowedValues:
+      - t3.small.elasticsearch
+      - t3.medium.elasticsearch
+  NetworkStack:
+    Type: String
+    Description: Network stack to apply to.
+  IntranetStack:
+    Type: String
+    Description: Intranet stack to apply to.
+  KeyId:
+    Type: String
+    Description: key id for encrypting at rest
+    Default: ""
+
+Conditions:
+  UseSSL: !Equals [!Ref EnforceSSL, 'true' ]
+  EncryptNodes: !Equals [!Ref NodeToNodeEncrypted, 'true' ]
+  EncryptData: !Equals [!Ref EncryptedAtRest, 'true' ]
+  CustomKey:  !Not [!Equals [!Ref KeyId, '']]
+
+Resources:
+  ElasticsearchDomain:
+    Type: AWS::Elasticsearch::Domain
+    Properties:
+      DomainName: !Ref DomainName
+      DomainEndpointOptions:
+        EnforceHTTPS: !If [ UseSSL, true, false ]
+      ElasticsearchVersion: !Ref ElasticsearchVersion
+      NodeToNodeEncryptionOptions:
+        Enabled: !If [ EncryptNodes, true, false ]
+      EncryptionAtRestOptions:
+        Enabled: !If [ EncryptData, true, false ]
+        KmsKeyId: !If [ CustomKey, !Ref KeyId, !Ref "AWS::NoValue" ]
+      ElasticsearchClusterConfig:
+        InstanceCount: '1'
+        InstanceType: !Ref InstanceType
+      EBSOptions:
+        EBSEnabled: 'true'
+        Iops: 0
+        VolumeSize: 20
+        VolumeType: gp2
+      SnapshotOptions:
+        AutomatedSnapshotStartHour: '0'
+      AccessPolicies:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+            Action: 'es:*'
+            Resource: '*'
+      AdvancedOptions:
+        rest.action.multi.allow_explicit_index: 'true'
+      VPCOptions:
+        SubnetIds:
+          - Fn::ImportValue:
+              !Sub ${NetworkStack}-SubnetNodesAId
+        SecurityGroupIds:
+          - !Ref ESSecurityGroup
+
+  ESSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Ref AWS::StackName
+      GroupDescription: !Ref AWS::StackName
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcId
+
+  ESSGRestCommunicationNetwork:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      FromPort: 9200
+      IpProtocol: 'tcp'
+      ToPort: 9200
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+
+  ESSGNodeCommunicationNetwork:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      FromPort: 9300
+      IpProtocol: 'tcp'
+      ToPort: 9300
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+
+  ESSGHTTPSCommunicationNetwork:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      FromPort: 443
+      IpProtocol: 'tcp'
+      ToPort: 443
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+
+  ESSGHTTPCommunicationNetwork:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      FromPort: 80
+      IpProtocol: 'tcp'
+      ToPort: 80
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+
+  ESSGHTTPSCommunicationIntranet:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      FromPort: 443
+      IpProtocol: 'tcp'
+      ToPort: 443
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+
+  ESSGHTTPCommunicationIntranet:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      FromPort: 80
+      IpProtocol: 'tcp'
+      ToPort: 80
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+
+  ESSGRestCommunicationIntranet:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      FromPort: 9200
+      IpProtocol: 'tcp'
+      ToPort: 9200
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+
+  ESSGNodeCommunicationIntranet:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      FromPort: 9300
+      IpProtocol: 'tcp'
+      ToPort: 9300
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+
+  ESSGEgressCommunicationNetwork:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${NetworkStack}-VpcCidr
+      IpProtocol: "-1" #Allow all out
+
+  ESSGEgressCommunicationIntranet:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ESSecurityGroup
+      CidrIp:
+        Fn::ImportValue:
+          !Sub ${IntranetStack}-VpnCidr
+      IpProtocol: "-1" #Allow all out
+
+  # Register Elasticsearch as a known DNS alias entry in the private hosted zone
+  InternalElasticsearchDNS:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: ElasticsearchDomain
+    Properties:
+      HostedZoneName:
+        !Join
+        - ''
+        - - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+          - '.'
+      Comment: DNS for Elasticsearch instance.
+      RecordSets:
+        - Name:
+            !Join
+            - ''
+            - - 'elasticsearch'
+              - '.'
+              - Fn::ImportValue: !Sub ${NetworkStack}-PrivateHostedZoneDNS
+              - '.'
+          Type: CNAME
+          TTL: 300
+          ResourceRecords:
+            - Fn::GetAtt: [ElasticsearchDomain, DomainEndpoint]
+
+Outputs:
+  DomainArn:
+    Value: !GetAtt ElasticsearchDomain.DomainArn
+  DomainEndpoint:
+    Value: !GetAtt ElasticsearchDomain.DomainEndpoint
+  SecurityGroupId:
+    Value: !Ref ESSecurityGroup

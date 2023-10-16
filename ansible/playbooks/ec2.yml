@@ -1,0 +1,37 @@
+---
+# EC2 auto-scaling group aws. This playbook can be used to both create or delete the ec2 cloudformation stacks. Passing either create or delete as an extra var.
+- name: EC2 auto-scaling group
+  hosts: localhost
+  vars_files:
+    - "{{ '../vars/cust/cust_' + cust_name + '.yml'}}"
+    - "../vars/aws/accounts.yml"
+  vars:
+    var_role_region: "{{ cust_config[cust_name][env_name]['aws_profile'].region }}"
+
+  tasks:
+    - name: Validate cust_name/env_name
+      assert:
+        that:
+          - cust_name is defined
+          - env_name is defined
+        fail_msg: "vars 'cust_name' and 'env_name' are required"
+
+    - name: Validate cust_name/env_name
+      assert:
+        that:
+          - cust_name is defined
+          - env_name is defined
+        fail_msg: "cust_name and env_name are required"
+
+    - name: Validate mode
+      assert:
+        that:
+          - "mode == 'create' or  mode == 'delete'"
+        fail_msg: "mode var must be either 'create' or 'delete'. ie -e 'mode=create'"
+
+    - name: "{{ mode }} ec2 autoscaling"
+      include_role:
+        name: aws_ec2
+      vars:
+        ec2_key_pair: "cussp-{{ cust_config[cust_name][env_name].account }}"
+        role_region: "{{ var_role_region }}"

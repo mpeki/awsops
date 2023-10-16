@@ -1,0 +1,48 @@
+---
+# AWS RDS (mysql) setup.
+#
+# This playbook is used to `create` or `delete` an RDS stack using a cloudformation template.
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-rds-database-instance.html
+#
+# Tia Cloud utilises a number of different RDS/MYSQL databases, to support state in fargate microservices,
+# so this playbook is called multiple times with different db_name values to manage each database.
+#
+# Usage examples:
+#
+# Create a 'claims-api' database for rnd/sandbox:
+#   ansible-playbook -v playbooks/rds.yml -e mode=create cust_name=rnd -e env_name=sandbox -e db_name=claims-api
+# Delete a 'trd-api' database for rnd/sandbox:
+#   ansible-playbook -v playbooks/rds.yml -e mode=delete cust_name=rnd -e env_name=sandbox -e db_name=trd-api
+#
+# The full list of accepted db_name values can be found in the ServiceName section of the cloudformation template.
+- name: AWS RDS set up
+  hosts: localhost
+  vars_files:
+    - "{{ '../vars/cust/cust_' + cust_name + '.yml' }}"
+
+  tasks:
+    - name: Validate cust_name/env_name
+      assert:
+        that:
+          - cust_name is defined
+          - env_name is defined
+        fail_msg: "vars 'cust_name' and 'env_name' are required"
+
+    - name: Validate mode
+      assert:
+        that:
+          - "mode == 'create' or  mode == 'delete'"
+        fail_msg: "mode var must be either 'create' or 'delete'. ie -e 'mode=create'"
+
+    - name: Validate db_name
+      assert:
+        that:
+          - db_name | regex_search('^users-api|claims-api|tia-claims-adapter|trd-api|communications-service|brd-scheduler|bs-spd-service-api|ds-ui-configuration|auth0-user-details$')
+        fail_msg: "'db_name' var must be one of the following: users-api|claims-api|tia-claims-adapter|trd-api|communications-service|brd-scheduler|bs-spd-service-api|ds-ui-configuration|auth0-user-details"
+
+    - name: "{{ mode }} AWS RDS service"
+      include_role:
+        name: aws_rds
+      vars:
+        role_region: "{{ cust_config[cust_name][env_name]['aws_profile'].region }}"
+        rds_create_read_replica: "{{ cust_config[cust_name][env_name].rds_create_read_replica|default(false) }}"

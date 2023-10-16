@@ -1,0 +1,40 @@
+---
+accounts:
+  - name: dev
+    number: 281283362525
+  - name: demo
+    number: 311542012115
+  - name: sbhdemo
+    number: 485853774387
+  - name: sbhtest
+    number: 895076489986
+  - name: m1
+    number: 676835235756
+  - name: rnddev
+    number: 515257242789
+  - name: sandbox
+    number: 094422079219
+  - name: lkdev
+    number: 801632488040
+  - name: sbhsit
+    number: 388832037785
+  - name: sbhsit3
+    number: 421097679277
+  - name: sbhdv
+    number: 242700670615
+  - name: sbhuat
+    number: 212851381958
+  - name: lkdv
+    number: 833803322944
+  - name: sbhpreprod
+    number: 894835815452
+  - name: sbhprod
+    number: 105117519332
+  - name: lkqa
+    number: 148160847177
+  - name: lktest
+    number: 927171048825
+  - name: lkmigtest
+    number: 052631791166
+  - name: lkuat
+    number: 875018536235
