@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Network ACLs for public traffic for Customer Self Service Portal"
+Description: "Network ACLs for public traffic for Dragons & Demons The Game - DoDGame"
 
 Parameters:
   NetworkStack:
@@ -171,15 +171,15 @@ Resources:
         To: 22
 
   # Allow EGRESS SSH TCP Port to git.tiatechnology.com - used by config-server to fetch configurations from micro services
-  DmzAclEntryEgressSSH:
-    Type: AWS::EC2::NetworkAclEntry
-    Properties:
-      NetworkAclId: !Ref DmzAcl
-      RuleNumber: 130
-      Protocol: 6 # 6 for TCP
-      RuleAction: allow
-      Egress: true
-      CidrBlock: 138.201.230.91/32 # git.tiatechnology.com
-      PortRange: # SSH
-        From: 22
-        To: 22
+#  DmzAclEntryEgressSSH:
+#    Type: AWS::EC2::NetworkAclEntry
+#    Properties:
+#      NetworkAclId: !Ref DmzAcl
+#      RuleNumber: 130
+#      Protocol: 6 # 6 for TCP
+#      RuleAction: allow
+#      Egress: true
+#      CidrBlock: 138.201.230.91/32 # git.tiatechnology.com
+#      PortRange: # SSH
+#        From: 22
+#        To: 22

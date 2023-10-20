@@ -2,8 +2,8 @@
 # VPN Gateway and Route Table for private intranet traffic for Customer Self Service Portal - CuSSP
 
 # defaults
-NETWORK_STACK_NAME=CuSSP-network
-INTRANET_STACK_NAME=CuSSP-intranet
+NETWORK_STACK_NAME=DoDGame-network
+INTRANET_STACK_NAME=DoDGame-intranet
 TARGET_PROFILE=dev
 CUSTOMER_IPV4_ADDRESS=
 DEST_CIDR_BLOCK=
@@ -23,9 +23,9 @@ create() {
     --template-body file://intranet.yml \
     --parameters \
     ParameterKey=NetworkStack,ParameterValue=${NETWORK_STACK_NAME} \
-    ParameterKey=CustomerIpV4Address,ParameterValue=${CUSTOMER_IPV4_ADDRESS} \
-    ParameterKey=DestinationCidrBlock,ParameterValue=${DEST_CIDR_BLOCK} \
     ParameterKey=BgpAsn,ParameterValue=${BGP_ASN}
+#    ParameterKey=CustomerIpV4Address,ParameterValue=${CUSTOMER_IPV4_ADDRESS} \
+#    ParameterKey=DestinationCidrBlock,ParameterValue=${DEST_CIDR_BLOCK} \
 }
 
 # update the stack
@@ -77,8 +77,8 @@ do
         p) TARGET_PROFILE=${OPTARG};;
         n) NETWORK_STACK_NAME=${OPTARG};;
         i) INTRANET_STACK_NAME=${OPTARG};;
-        c) CUSTOMER_IPV4_ADDRESS=${OPTARG};;
-        d) DEST_CIDR_BLOCK=${OPTARG};;
+#        c) CUSTOMER_IPV4_ADDRESS=${OPTARG};;
+#        d) DEST_CIDR_BLOCK=${OPTARG};;
         b) BGP_ASN=${OPTARG};;
         *) usage;;
     esac

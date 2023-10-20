@@ -64,7 +64,7 @@ init() {
   if [ -z ${SERVICE_CPU} ]; then if [[ ${LAUNCH_TYPE} == "FARGATE" ]]; then SERVICE_CPU=256; else SERVICE_CPU=100; fi; fi
   if [ -z ${SERVICE_MEMORY} ]; then if [[ ${LAUNCH_TYPE} == "FARGATE" ]]; then SERVICE_MEMORY=1024; else SERVICE_MEMORY=768; fi; fi
 
-  if [ -z ${SERVICE_STACK_NAME} ]; then SERVICE_STACK_NAME=CuSSP-service-setup-${SERVICE_NAME,,}; fi # Default names for stack - change if using another default than CuSSP
+  if [ -z ${SERVICE_STACK_NAME} ]; then SERVICE_STACK_NAME=DoDGame-service-setup-${SERVICE_NAME,,}; fi # Default names for stack - change if using another default than CuSSP
   if [ -z ${SERVICE_REPO_NAME} ]; then SERVICE_REPO_NAME=${SERVICE_NAME}; fi                         # Default names for repo
   if [ -z ${SERVICE_PATH} ]; then SERVICE_PATH=${SERVICE_NAME,,}; fi                                 # Use service name in lowercase as path if not defined
   if [ -z ${HEALTH_CHECK_PATH} ]; then HEALTH_CHECK_PATH="/"${SERVICE_PATH}"/health"; fi

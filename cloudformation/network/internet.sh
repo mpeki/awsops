@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Internet Gateway and Route Table for public traffic for Customer Self Service Portal - CuSSP
+# Internet Gateway and Route Table for public traffic for Dragons & Demons The Game - DoDGame
 
 # defaults
-NETWORK_STACK_NAME=CuSSP-network
-INTERNET_STACK_NAME=CuSSP-internet
-TARGET_PROFILE=dev
+NETWORK_STACK_NAME=DoDGame-network
+INTERNET_STACK_NAME=DoDGame-internet
+TARGET_PROFILE=
 WAIT_ACTION=
 
 # validate template

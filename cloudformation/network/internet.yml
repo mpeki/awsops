@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Internet Gateway and Route Table for public traffic for Customer Self Service Portal"
+Description: "Internet Gateway and Route Table for public traffic for DoDGame"
 
 Parameters:
   NetworkStack:

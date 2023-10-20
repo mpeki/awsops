@@ -2,8 +2,8 @@
 # Network ACLs for public traffic for Customer Self Service Portal - CuSSP
 
 # defaults
-NETWORK_STACK_NAME=CuSSP-network
-INTERNET_SECURITY_STACK_NAME=CuSSP-internet-security
+NETWORK_STACK_NAME=DoDGame-network
+INTERNET_SECURITY_STACK_NAME=DoDGame-internet-security
 TARGET_PROFILE=dev
 WAIT_ACTION=
 

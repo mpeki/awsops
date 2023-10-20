@@ -1,0 +1,56 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Account S3 bucket and public read policy for portal content"
+
+Parameters:
+  BucketName:
+    Type: "String"
+    Description: "Must be globally unique"
+
+Resources:
+  # Create a bucket to hold content for portal
+  BucketForPortalContents:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      AccessControl: PublicRead
+      BucketName: !Ref BucketName # must be globally unique
+
+  BucketPolicyForPortalContents:
+    # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-policy.html
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref BucketForPortalContents
+      PolicyDocument:
+        Statement:
+            # allow the account to read from this bucket
+          - Action: "s3:GetObject"
+            Effect: "Allow"
+            Principal: "*"
+            Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/*"]]
+
+  # Create a bucket to hold content for logging
+  BucketForLogs:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      AccessControl: Private
+      BucketName: !Join [ "-", [!Ref BucketName, "logs"]]
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireIn30DaysRule
+            Status: Enabled
+            ExpirationInDays: '30'
+
+  BucketPolicyForLogs:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref BucketForLogs
+      PolicyDocument:
+        Statement:
+            # allow the loadbalancer to store logs - https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html?icmpid=docs_elbv2_console
+          - Action: "s3:PutObject"
+            Effect: "Allow"
+            Resource: !Join [ "", [!GetAtt BucketForLogs.Arn, "/*"]]
+            Principal:
+              AWS:
+                - '054676820928'
+

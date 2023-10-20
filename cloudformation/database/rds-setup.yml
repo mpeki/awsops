@@ -51,24 +51,17 @@ Parameters:
     Type: String
 
   DatabaseVersion:
-    Default: "5.7"
+    Default: "8.0.33"
     Description: The Engine version to use for the database.
     Type: String
     AllowedValues:
-      - "8.0.19"
+      - "8.0.33"
       - "5.7"
 
   ServiceName:
     AllowedValues:
-      - "users-api"
-      - "claims-api"
-      - "tia-claims-adapter"
-      - "trd-api"
-      - "communications-service"
-      - "brd-scheduler"
-      - "bs-spd-service-api"
-      - "ds-ui-configuration"
-      - "auth0-user-details"
+      - "dodgame-api"
+      - "dodgame-security"
     Type: String
     Description: "DB for this service"
 

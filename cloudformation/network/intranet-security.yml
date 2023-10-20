@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Network ACLs for private intranet traffic for Customer Self Service Portal"
+Description: "Network ACLs for private intranet traffic for Dragons & Demons The Game - DoDGame"
 
 Parameters:
   NetworkStack:

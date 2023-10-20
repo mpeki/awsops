@@ -4,8 +4,8 @@
 # ##
 
 # Default names for stack - change if using another default than CuSSP
-ECS_STACK_NAME=CuSSP-roles-for-ecs
-CONFIG_BUCKET_NAME=cussp-configs
+ECS_STACK_NAME=DoDGame-roles-for-ecs
+CONFIG_BUCKET_NAME=dodgame-dev-configs
 TARGET_PROFILE=dev
 WAIT_ACTION=
 

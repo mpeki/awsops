@@ -20,24 +20,15 @@ ECS_EXECUTION_ROLE_FOR_SERVICES_NAME=ecsTaskExecutionRole
 ECS_SERVICE_ROLE=
 ECS_SERVICE_ROLE_NAME=EcsServiceRole
 SERVICE_NAME=
-SERVICE_VERSION=1.0.0
-SERVICE_REPO_NAME=
-SERVICE_REPO_URI=macp/dod
-SERVICE_IMAGE=
-SOURCE_REVISION=
 SERVICE_CPU=
 SERVICE_MEMORY=
-SERVICE_PORT=8090
+SERVICE_PORT=8181
 SERVICE_PATH=
-SERVICE_DIR=
 SERVICE_DESIRED_COUNT=1
 LAUNCH_TYPE=FARGATE
 SERVICE_STACK_NAME=
 TARGET_PROFILE=
-CONFIG_SERVER_URL=http://api-lb-internal.cussp.local/config
-GIT_URL=git@git.tiatechnology.com:environment/config/server-repo.git
 ACTIVE_PROFILES=default,prod
-CONFIG_LABELS=master
 WAIT_ACTION=
 USE_AWS_REPO_IMAGE=false
 DO_UPDATE=false
@@ -45,7 +36,6 @@ FORCE_UPDATE=false
 HEALTH_CHECK_PATH=
 REGISTRY_NAME=macp
 SERVICE_PROFILE=
-PROJECT_ROOT=
 HEALTH_CHECK_PROTOCOL=
 TARGET_GROUP_PORT=
 TARGET_GROUP_PROTOCOL=
@@ -65,7 +55,6 @@ init() {
   if [ -z ${SERVICE_MEMORY} ]; then if [[ ${LAUNCH_TYPE} == "FARGATE" ]]; then SERVICE_MEMORY=1024; else SERVICE_MEMORY=768; fi; fi
 
   if [ -z ${SERVICE_STACK_NAME} ]; then SERVICE_STACK_NAME=DoDGame-service-setup-${SERVICE_NAME,,}; fi # Default names for stack - change if using another default than DoDGame
-  if [ -z ${SERVICE_REPO_NAME} ]; then SERVICE_REPO_NAME=${SERVICE_NAME}; fi                         # Default names for repo
   if [ -z ${SERVICE_PATH} ]; then SERVICE_PATH=${SERVICE_NAME,,}; fi                                 # Use service name in lowercase as path if not defined
   if [ -z ${HEALTH_CHECK_PATH} ]; then HEALTH_CHECK_PATH="/"${SERVICE_PATH}"/health"; fi
 
@@ -95,25 +84,6 @@ init() {
       ACTIVE_PROFILES=${ACTIVE_PROFILES},${SERVICE_PROFILE,,}
     fi
   fi
-  [[ -z "${PROJECT_ROOT}" ]] && PROJECT_ROOT="$UNICORN_HOME/$SERVICE_NAME"
-  if [ -z ${SERVICE_REPO_URI} ]; then SERVICE_REPO_URI=$(aws --profile admin ecr describe-repositories --repository-names ${SERVICE_REPO_NAME} --query 'repositories[0].repositoryUri' --output text); fi
-  if [ -z ${SERVICE_IMAGE} ]; then
-    if [[ "${USE_AWS_REPO_IMAGE}" == true ]]; then
-      checkService
-      IMAGE_VERSION=$(aws --profile admin ecr describe-images --repository-name ${SERVICE_REPO_NAME} --query "reverse(sort_by(imageDetails,& imagePushedAt))[].[[imageTags[]]]" --output json | jq --arg v "${SERVICE_VERSION}[-0-9a-f]{0,40}" -r '.[][][][]? | select(match($v,"s"))' | head -1)
-      if [[ -z ${IMAGE_VERSION} ]]; then
-        echo "Could't find image with specified version, check the registry."
-        exit 1
-      fi
-      SERVICE_IMAGE=${SERVICE_REPO_URI}:${IMAGE_VERSION}
-    #elif [[ ${SERVICE_VERSION^^} == *"-SNAPSHOT" ]] && [ -d "$PROJECT_ROOT/.git" ]; then
-    elif [ -d "$PROJECT_ROOT/.git" ]; then
-      REVISION=$(git --git-dir $PROJECT_ROOT/.git rev-parse --verify HEAD)
-      SERVICE_IMAGE=${SERVICE_REPO_URI}:${SERVICE_VERSION}-${REVISION,,}
-    else
-      SERVICE_IMAGE=${SERVICE_REPO_URI}:${SERVICE_VERSION}
-    fi
-  fi
 }
 
 # Print report for all services about image and cpu/memory/env configuration
@@ -126,38 +96,19 @@ report() {
   done
 }
 
-checkService() {
-  local LATEST_IMAGE_VERSION
-  local SERVICE
-  local TASK_DEF
-
-  LATEST_IMAGE_VERSION=$(aws --profile admin ecr describe-images --repository-name "${SERVICE_REPO_NAME}" --query "reverse(sort_by(imageDetails,& imagePushedAt))[:1].[[imageTags[0]]]" --output text | head -n 1)
-  SERVICE=$(aws --profile "${TARGET_PROFILE}" ecs list-services --cluster ${ECS_CLUSTER_NAME} --query "serviceArns[?contains(@,\`${SERVICE_NAME}\`)]" --output text)
-
-  if [ -n "${SERVICE}" ]; then
-    TASK_DEF=$(aws --profile "${TARGET_PROFILE}" ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services $SERVICE --query 'services[?status==`ACTIVE`].[taskDefinition]' --output text)
-    DO_UPDATE=$(aws --profile "${TARGET_PROFILE}" ecs describe-task-definition --task-definition "${TASK_DEF}" --query "taskDefinition.containerDefinitions[*].[!contains(image, \`${LATEST_IMAGE_VERSION}\`)]" --output text)
-  fi
-}
-
 # validate the template
 validate() {
-  aws --profile ${TARGET_PROFILE} cloudformation validate-template --template-body file://service-setup-elb.yml
+  aws --profile ${TARGET_PROFILE} cloudformation validate-template --template-body file://keycloak-setup-elb.yml
 }
 
 # create stack
 create() {
   aws --profile ${TARGET_PROFILE} cloudformation create-stack \
     --stack-name ${SERVICE_STACK_NAME} \
-    --template-body file://service-setup-elb.yml \
+    --template-body file://keycloak-setup-elb.yml \
     --parameters \
     ParameterKey=NetworkStack,ParameterValue=${NETWORK_STACK_NAME} \
     ParameterKey=EcsStack,ParameterValue=${ECS_CLUSTER_STACK_NAME} \
-    ParameterKey=TargetProfile,ParameterValue=${TARGET_PROFILE} \
-    ParameterKey=ActiveProfiles,ParameterValue=''"'${ACTIVE_PROFILES}'"'' \
-    ParameterKey=ConfigServerURL,ParameterValue=${CONFIG_SERVER_URL} \
-    ParameterKey=GitURL,ParameterValue=${GIT_URL} \
-    ParameterKey=ConfigLabels,ParameterValue=''"'${CONFIG_LABELS}'"'' \
     ParameterKey=EcsCluster,ParameterValue=${ECS_CLUSTER} \
     ParameterKey=ElbForServices,ParameterValue=${ELB_FOR_SERVICES} \
     ParameterKey=ElbListener,ParameterValue=${ELB_LISTENER} \
@@ -166,8 +117,6 @@ create() {
     ParameterKey=EcsExecutionRoleForServices,ParameterValue=${ECS_EXECUTION_ROLE_FOR_SERVICES} \
     ParameterKey=EcsServiceRole,ParameterValue=${ECS_SERVICE_ROLE} \
     ParameterKey=ServiceName,ParameterValue=${SERVICE_NAME} \
-    ParameterKey=ServiceImage,ParameterValue=${SERVICE_IMAGE} \
-    ParameterKey=SourceRevision,ParameterValue=${SOURCE_REVISION} \
     ParameterKey=ServiceCpu,ParameterValue=${SERVICE_CPU} \
     ParameterKey=ServiceMemory,ParameterValue=${SERVICE_MEMORY} \
     ParameterKey=ServicePort,ParameterValue=${SERVICE_PORT} \
@@ -191,15 +140,10 @@ update() {
   else
     aws --profile ${TARGET_PROFILE} cloudformation update-stack \
       --stack-name ${SERVICE_STACK_NAME} \
-      --template-body file://service-setup-elb.yml \
+      --template-body file://keycloak-setup-elb.yml \
       --parameters \
       ParameterKey=NetworkStack,ParameterValue=${NETWORK_STACK_NAME} \
       ParameterKey=EcsStack,ParameterValue=${ECS_CLUSTER_STACK_NAME} \
-      ParameterKey=TargetProfile,ParameterValue=${TARGET_PROFILE} \
-      ParameterKey=ActiveProfiles,ParameterValue=''"'${ACTIVE_PROFILES}'"'' \
-      ParameterKey=ConfigServerURL,ParameterValue=${CONFIG_SERVER_URL} \
-      ParameterKey=ConfigLabels,ParameterValue=''"'${CONFIG_LABELS}'"'' \
-      ParameterKey=GitURL,ParameterValue=${GIT_URL} \
       ParameterKey=EcsCluster,ParameterValue=${ECS_CLUSTER} \
       ParameterKey=ElbForServices,ParameterValue=${ELB_FOR_SERVICES} \
       ParameterKey=ElbListener,ParameterValue=${ELB_LISTENER} \
@@ -208,8 +152,6 @@ update() {
       ParameterKey=EcsExecutionRoleForServices,ParameterValue=${ECS_EXECUTION_ROLE_FOR_SERVICES} \
       ParameterKey=EcsServiceRole,ParameterValue=${ECS_SERVICE_ROLE} \
       ParameterKey=ServiceName,ParameterValue=${SERVICE_NAME} \
-      ParameterKey=ServiceImage,ParameterValue=${SERVICE_IMAGE} \
-      ParameterKey=SourceRevision,ParameterValue=${SOURCE_REVISION} \
       ParameterKey=ServiceCpu,ParameterValue=${SERVICE_CPU} \
       ParameterKey=ServiceMemory,ParameterValue=${SERVICE_MEMORY} \
       ParameterKey=ServicePort,ParameterValue=${SERVICE_PORT} \
@@ -241,19 +183,6 @@ show() {
   aws --profile ${TARGET_PROFILE} ecs describe-clusters --clusters ${ECS_CLUSTER_NAME} --query 'clusters[?status==`ACTIVE`].[{Cluster:clusterName, "EC2 Instances": registeredContainerInstancesCount, Services: activeServicesCount, "Tasks Pending": pendingTasksCount, "Tasks Running": runningTasksCount}]' --output table
 }
 
-# tag image
-tag() {
-  docker tag ${REGISTRY_NAME}/${SERVICE_REPO_NAME}:${SERVICE_VERSION} ${SERVICE_IMAGE}
-}
-
-# push image
-push() {
-  REGISTRY_ID=$(aws --profile admin sts get-caller-identity --query 'Account' --output text)
-  #`aws --profile admin ecr get-login --registry-ids ${REGISTRY_ID} --no-include-email`
-  docker login -u AWS -p $(aws --profile admin ecr get-login-password) $SERVICE_IMAGE
-  docker push $SERVICE_IMAGE
-}
-
 # print usage
 usage() {
   echo -e "\nService setup with load balancer and ESC cluster AWS CloudFormation for Customer Self Service Portal.\n"
@@ -261,8 +190,6 @@ usage() {
 [-p <profile>] \
 [-P <project root>] \
 [-f <active profiles>] \
-[-g <Config Server URL] \
-[-H <Config Server Git URL>] \
 [-t <stack name>] \
 [-n <network stack name>] \
 [-c <cluster name>] \
@@ -272,7 +199,6 @@ usage() {
 [-r <ecs task role name>] \
 [-s <ecs service role name>] \
 [-e <service name>] \
-[-v <service version>] \
 [-o <service repo name>] \
 [-i <service image>] \
 [-u <service CPU>] \
@@ -285,11 +211,6 @@ usage() {
   echo "Defaults:"
   echo -e "\ttarget profile="${TARGET_PROFILE}
   echo -e "\tservice profile="${SERVICE_PROFILE}
-  echo -e "\tproject root="${PROJECT_ROOT}
-  echo -e "\tactive profiles="${ACTIVE_PROFILES}
-  echo -e "\tConfig Server URL="${CONFIG_SERVER_URL}
-  echo -e "\tConfig Server Git URL="${GIT_URL}
-  echo -e "\tConfig Labels="${CONFIG_LABELS}
   echo -e "\tstack name="${SERVICE_STACK_NAME}
   echo -e "\tnetwork stack name="${NETWORK_STACK_NAME}
   echo -e "\tecs cluster stack name="${ECS_CLUSTER_STACK_NAME}
@@ -307,11 +228,6 @@ usage() {
   echo -e "\tecs service role ARN="${ECS_SERVICE_ROLE}
   echo -e "\tecs service role name="${ECS_SERVICE_ROLE_NAME}
   echo -e "\tservice name="${SERVICE_NAME}
-  echo -e "\tservice version="${SERVICE_VERSION}
-  echo -e "\tsource revision="${SOURCE_REVISION}
-  echo -e "\tservice repo name="${SERVICE_REPO_NAME}
-  echo -e "\tservice repo URI="${SERVICE_REPO_URI}
-  echo -e "\tservice image="${SERVICE_IMAGE}
   echo -e "\tservice CPU="${SERVICE_CPU}
   echo -e "\tservice MEM="${SERVICE_MEMORY}
   echo -e "\tservice port="${SERVICE_PORT}
@@ -342,15 +258,12 @@ while getopts a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:p:q:r:s:v:t:u:B:C:D:G:H:P:R:V:Y:Zz o
   d) SERVICE_DESIRED_COUNT=${OPTARG} ;;
   e) SERVICE_NAME=${OPTARG} ;;
   f) ACTIVE_PROFILES=${OPTARG} ;;
-  g) CONFIG_SERVER_URL=${OPTARG} ;;
   h) SERVICE_PORT=${OPTARG} ;;
-  i) SERVICE_IMAGE=${OPTARG} ;;
   j) ECS_EXECUTION_ROLE_FOR_SERVICES_NAME=${OPTARG} ;;
   k) HEALTH_CHECK_PATH=${OPTARG} ;;
   l) ELB_FOR_SERVICES_NAME=${OPTARG} ;;
   m) SERVICE_MEMORY=${OPTARG} ;;
   n) NETWORK_STACK_NAME=${OPTARG} ;;
-  o) SERVICE_REPO_NAME=${OPTARG} ;;
   p) TARGET_PROFILE=${OPTARG} ;;
   q) ELB_PROTOCOL=${OPTARG} ;;
   r) ECS_TASK_ROLE_FOR_SERVICES_NAME=${OPTARG} ;;
@@ -360,12 +273,7 @@ while getopts a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:p:q:r:s:v:t:u:B:C:D:G:H:P:R:V:Y:Zz o
   B) HEALTH_CHECK_PROTOCOL=${OPTARG} ;;
   C) TARGET_GROUP_PORT=${OPTARG} ;;
   D) TARGET_GROUP_PROTOCOL=${OPTARG} ;;
-  G) CONFIG_LABELS=${OPTARG} ;;
-  H) GIT_URL=${OPTARG};;
-  P) PROJECT_ROOT=${OPTARG} ;;
   R) REGISTRY_NAME=${OPTARG} ;;
-  v) SERVICE_VERSION=${OPTARG} ;;
-  V) SOURCE_REVISION=${OPTARG} ;;
   y) LAUNCH_TYPE=${OPTARG} ;;
   Z)
     USE_AWS_REPO_IMAGE=true
@@ -419,11 +327,6 @@ tag)
 push)
   init
   push
-  ;;
-
-checkService)
-  init
-  checkService
   ;;
 
 *)

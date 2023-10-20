@@ -3,7 +3,7 @@
 # RDS setup with AWS CloudFormation for Customer Self Service Portal - CuSSP
 # ##
 
-STACK_NAME=CuSSP-RDS-parametergroup
+STACK_NAME=DoDGame-RDS-parametergroup
 TARGET_PROFILE=dev
 WAIT_ACTION=
 

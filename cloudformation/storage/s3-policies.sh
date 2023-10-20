@@ -4,8 +4,8 @@
 # defaults
 POLICIES_STACK_NAME=
 #TARGET_PROFILE=dev
-BUCKETS_STACK_NAME=CuSSP-s3-buckets
-BUCKET_NAME=cussp
+BUCKETS_STACK_NAME=DoDGame-s3-buckets
+BUCKET_NAME=dodgame
 
 ACCOUNT_ID=
 
@@ -23,7 +23,7 @@ validate() {
 create() {
     init
 
-    aws --profile admin cloudformation create-stack \
+    aws --profile AdminAccess-dodgame-dev cloudformation create-stack \
     --stack-name ${POLICIES_STACK_NAME} \
     --template-body file://s3-policies.yml \
     --parameters \

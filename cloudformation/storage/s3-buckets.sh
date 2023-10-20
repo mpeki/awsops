@@ -2,7 +2,7 @@
 # Create S3 buckets for admin account {GeneralOperations, Configs, Backups}
 
 # defaults
-BUCKETS_STACK_NAME=CuSSP-s3-buckets
+BUCKETS_STACK_NAME=DoDGame-s3-buckets
 BUCKET_NAME=
 
 # validate template
@@ -12,7 +12,7 @@ validate() {
 
 # create the stack for buckets
 create() {
-    aws --profile admin cloudformation create-stack \
+    aws --profile AdminAccess-dodgame-dev cloudformation create-stack \
     --stack-name ${BUCKETS_STACK_NAME} \
     --template-body file://s3-buckets.yml \
     --parameters \

@@ -2,8 +2,8 @@
 # Network ACLs for private intranet traffic for Customer Self Service Portal - CuSSP
 
 # defaults
-NETWORK_STACK_NAME=CuSSP-network
-INTRANET_SECURITY_STACK_NAME=CuSSP-intranet-security
+NETWORK_STACK_NAME=DoDGame-network
+INTRANET_SECURITY_STACK_NAME=DoDGame-intranet-security
 INTRANET_CIDR_BLOCK=
 TARGET_PROFILE=dev
 WAIT_ACTION=

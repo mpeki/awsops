@@ -3,9 +3,9 @@
 # RDS setup with AWS CloudFormation for Customer Self Service Portal - CuSSP
 # ##
 
-NETWORK_STACK_NAME=CuSSP-network
-DB_PARAMETER_GROUP_STACK_NAME=CuSSP-RDS-parametergroup
-DB_SUBNET_STACK_NAME=CuSSP-RDS-subnet
+NETWORK_STACK_NAME=DoDGame-network
+DB_PARAMETER_GROUP_STACK_NAME=DoDGame-RDS-parametergroup
+DB_SUBNET_STACK_NAME=DoDGame-RDS-subnet
 SERVICE_NAME=
 DB_STACK_NAME=
 TARGET_PROFILE=dev
@@ -14,7 +14,7 @@ DB_INSTANCE_TYPE=db.t3.micro
 DB_USER=
 DB_PASSWORD=
 WAIT_ACTION=
-DB_VERSION="5.7"
+DB_VERSION="8.0.33"
 
 init() {
     if [ -z ${SERVICE_NAME} ]; then
@@ -24,7 +24,7 @@ init() {
 
     SERVICE_NAME=${SERVICE_NAME,,}
 
-    if [ -z ${DB_STACK_NAME} ]; then DB_STACK_NAME=CuSSP-RDS-${SERVICE_NAME,,}; fi # Default names for stack - change if using another default than CuSSP
+    if [ -z ${DB_STACK_NAME} ]; then DB_STACK_NAME=DoDGame-RDS-${SERVICE_NAME,,}; fi # Default names for stack - change if using another default than CuSSP
 
     if [ -z ${DB_USER} ]; then
         DB_USER=${SERVICE_NAME,,}

@@ -4,9 +4,9 @@
 # ##
 
 # Stack name of our network setup
-STACK_NAME=CuSSP-RDS-subnet
-NETWORK_STACK_NAME=CuSSP-network
-INTRANET_STACK_NAME=CuSSP-intranet
+STACK_NAME=DoDGame-RDS-subnet
+NETWORK_STACK_NAME=DoDGame-network
+INTRANET_STACK_NAME=DoDGame-intranet
 TARGET_PROFILE=dev
 WAIT_ACTION=
 

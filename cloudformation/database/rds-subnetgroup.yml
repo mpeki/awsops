@@ -47,16 +47,16 @@ Resources:
           !Sub ${NetworkStack}-VpcCidr
       IpProtocol: "-1" # allow all traffic outbound
 
-  MicroServiceVPCSecurityGroupEgressIntranet:
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      GroupId: !Ref MicroserviceVPCSecurityGroup
-      CidrIp:
-        Fn::ImportValue:
-          !Sub ${IntranetStack}-VpnCidr
-      IpProtocol: "-1" # allow all traffic outbound
+#  MicroServiceVPCSecurityGroupEgressIntranet:
+#    Type: AWS::EC2::SecurityGroupEgress
+#    Properties:
+#      GroupId: !Ref MicroserviceVPCSecurityGroup
+#      CidrIp:
+#        Fn::ImportValue:
+#          !Sub ${IntranetStack}-VpnCidr
+#      IpProtocol: "-1" # allow all traffic outbound
 
-  # allow DB to receive connections
+# allow DB to receive connections
   MicroServiceVPCSecurityGroupIngressAllowMySQL:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -68,16 +68,16 @@ Resources:
       FromPort: 3306
       ToPort: 3306
 
-  MicroServiceVPCSecurityGroupIngressAllowIntranet:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref MicroserviceVPCSecurityGroup
-      CidrIp:
-        Fn::ImportValue:
-          !Sub ${IntranetStack}-VpnCidr
-      IpProtocol: "tcp"
-      FromPort: 3306
-      ToPort: 3306
+#  MicroServiceVPCSecurityGroupIngressAllowIntranet:
+#    Type: AWS::EC2::SecurityGroupIngress
+#    Properties:
+#      GroupId: !Ref MicroserviceVPCSecurityGroup
+#      CidrIp:
+#        Fn::ImportValue:
+#          !Sub ${IntranetStack}-VpnCidr
+#      IpProtocol: "tcp"
+#      FromPort: 3306
+#      ToPort: 3306
 
 
 Outputs:

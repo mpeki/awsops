@@ -4,7 +4,7 @@
 # ##
 
 # Default names for stacks - change if using another default than CuSSP
-FARGATE_STACK_NAME=CuSSP-roles-for-fargate
+FARGATE_STACK_NAME=DoDGame-roles-for-fargate
 TARGET_PROFILE=dev
 WAIT_ACTION=
 

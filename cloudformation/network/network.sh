@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# VPC and subnet Creation with AWS CloudFormation for Customer Self Service Portal - CuSSP
+# VPC and subnet Creation with AWS CloudFormation for Dragons & Demons The Game - DoDGame
 
 # defaults
-NETWORK_STACK_NAME=CuSSP-network
+NETWORK_STACK_NAME=DoDGame-network
 VPC_CIDR_PREFIX=10.42.0
 TARGET_PROFILE=dev
 WAIT_ACTION=
-LOCAL_DNS_NAME=cussp.local
+LOCAL_DNS_NAME=dodgame.local
 
 # validate template
 validate() {
@@ -48,7 +48,7 @@ show() {
 
 # print usage
 usage() {
-    echo -e "\nVPC and subnet Creation with AWS CloudFormation for Customer Self Service Portal.\n"
+    echo -e "\nVPC and subnet Creation with AWS CloudFormation for Dragons & Demons The Game - DoDGame.\n"
     echo "Usage: $0 <[-p <profile>] [-n <network name>] [-c <CIDR prefix>] [-d <local DNS name>] {create|wait|update|show}> | validate" 1>&2;
     echo "Defaults:"
     echo -e "\tnetwork name="${NETWORK_STACK_NAME}

@@ -39,36 +39,24 @@ Parameters:
     Type: "String"
     Description: "The role used for service"
 
-  TargetProfile:
+  KeycloakDBHost:
     Type: "String"
-    Description: "The profile"
+    Default: "dodgame-security-db.cjhxdvvnmntx.eu-north-1.rds.amazonaws.com"
+    Description: "Database host for keycloak"
 
-  ActiveProfiles:
+  KeycloakDBPort:
     Type: "String"
-    Description: "The active profiles - determines which configurations are fetched from config server"
-    Default: "default,prod"
+    Default: "3306"
+    Description: "Database port for keycloak"
 
-  ConfigServerURL:
+  KeycloakHostname:
     Type: "String"
-    Description: "The URL for the config server"
-    Default: http://api-lb-internal.cussp.local/config
-
-  ConfigLabels:
-    Type: "String"
-    Description: "The active configuration labels - determines which configurations are fetched from config server"
-    Default: "master"
+    Description: "Keycloak hostname"
+    Default: "services.dod-game.com"
 
   ServiceName:
     Type: "String"
     Description: "Service names must be unique within a cluster, but you can have similarly named services in multiple clusters within a region or across multiple regions."
-
-  ServiceImage:
-    Type: "String"
-    Description: "The image used to start a service."
-
-  SourceRevision:
-    Type: "String"
-    Description: "Source repository revision number."
 
   ServiceCpu:
     Type: "Number"
@@ -86,6 +74,7 @@ Parameters:
 
   ServicePath:
     Type: "String"
+    Default: "/auth"
     Description: "Part of a single path pattern - e.g.  '/<ServicePath>/*'"
 
   ServiceDesiredCount:
@@ -123,11 +112,6 @@ Parameters:
     Default: "HTTP"
     Description: protocol to use when connecting over https
 
-  GitURL:
-    Type: String
-    Default: "git@git.tiatechnology.com:environment/config/server-repo.git"
-    Description: "Where the config server should pull it's base configuration from"
-
   SecretArn:
     Type: String
     Description: "ARN of artifactory secret in Secret Manager"
@@ -161,42 +145,48 @@ Resources:
       ExecutionRoleArn: !If [LaunchTypeFargate, !Ref EcsExecutionRoleForServices, !Ref "AWS::NoValue"]
       ContainerDefinitions:
         - Name: !Ref ServiceName
-          Image: !Ref ServiceImage
+          Image: "macp/dod-keycloak:22.0.1"
           RepositoryCredentials: !If
           - UsePrivateRepo
           - CredentialsParameter: !Ref SecretArn
           - !Ref "AWS::NoValue"
+          Command: ["start-dev",  "--http-port=8181", "--hostname-admin-url=https://services.dod-game.com/auth", "--hostname-debug=true", "--import-realm"]
           Cpu: !If [LaunchTypeFargate, !Ref "AWS::NoValue", !Ref ServiceCpu]
           Memory: !If [LaunchTypeFargate, !Ref "AWS::NoValue", !Ref ServiceMemory]
           Environment:
-            - Name: TARGET_PROFILE
-              Value: !Ref TargetProfile
-            - Name: ACTIVE_PROFILES
-              Value: !Ref ActiveProfiles
-            - Name: SPRING_PROFILES_ACTIVE
-              Value: !Ref ActiveProfiles
-            - Name: spring_profiles_active
-              Value: !Ref ActiveProfiles
-            - Name: spring_cloud_config_uri
-              Value: !Ref ConfigServerURL
-            - Name: CONFIG_SERVER_URL
-              Value: !Ref ConfigServerURL
-            - Name: spring_cloud_config_label
-              Value: !Ref ConfigLabels
-            - Name: CONFIG_LABELS
-              Value: !Ref ConfigLabels
-            - Name: AWS_DEFAULT_REGION
-              Value: !Ref AWS::Region
-            - Name: spring_application_name
-              Value: !Ref ServiceName
-            - Name: AWS_XRAY_DAEMON_ADDRESS
-              Value: xray-daemon.services.cussp.local:2000
-            - Name: KEYSTORE_URL
-              Value: !Ref KeyStoreUrl
-            - Name: GIT_URL
-              Value: !Ref GitURL
-          DockerLabels:
-            com.tiatechnology.revision : !Ref SourceRevision
+            - Name: KC_DB_URL_HOST
+              Value: !Ref KeycloakDBHost
+            - Name: KC_DB_URL_PORT
+              Value: !Ref KeycloakDBPort
+            - Name: KC_HOSTNAME
+              Value: !Ref KeycloakHostname
+            - Name: KC_HTTP_RELATIVE_PATH
+              Value: "/auth"
+            - Name: KC_TRANSACTION_XA_ENABLED
+              Value: "false"
+            - Name: PROXY_ADDRESS_FORWARDING
+              Value: 'true'
+            - Name: KC_PROXY
+              Value: 'edge'
+            # Move to secrets
+            - Name: KEYCLOAK_ADMIN
+              Value: "admin"
+            - Name: KEYCLOAK_ADMIN_PASSWORD
+              Value: "admin"
+            - Name: KEYCLOAK_LOGLEVEL
+              Value: "DEBUG"
+            - Name: ROOT_LOGLEVEL
+              Value: "DEBUG"
+            - Name: KC_DB_URL_DATABASE
+              Value: "dodgamesecurityDB"
+            - Name: KC_DB_USERNAME
+              Value: "dodgamesecurity"
+            - Name: KC_DB_PASSWORD
+              Value: "!dodgamesecurity!"
+            - Name: KC_DB_TIMEOUT_WAIT_SECONDS
+              Value: "600"
+            - Name: KC_HEALTH_ENABLED
+              Value: "true"
           Essential: "true"
           PortMappings:
             - ContainerPort: !Ref ServicePort
@@ -242,7 +232,7 @@ Resources:
       Cluster: !Ref EcsCluster
       LaunchType: !If ['LaunchTypeFargate', FARGATE, EC2]
       DesiredCount: !Ref ServiceDesiredCount
-      HealthCheckGracePeriodSeconds: 1500
+      HealthCheckGracePeriodSeconds: 1800
       NetworkConfiguration:
         !If
         - LaunchTypeFargate

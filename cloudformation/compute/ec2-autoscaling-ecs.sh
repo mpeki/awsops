@@ -5,15 +5,15 @@
 
 TARGET_PROFILE=dev
 # set our stack name as a variable
-STACK_NAME=CuSSP-ecs-auto-scaling-group
+STACK_NAME=DoDGame-ecs-auto-scaling-group
 # Stack name of our network setup
-NETWORK_STACK_NAME=CuSSP-network
+NETWORK_STACK_NAME=DoDGame-network
 # Stack name of our intranet setup
-INTRANET_STACK_NAME=CuSSP-intranet
+INTRANET_STACK_NAME=DoDGame-intranet
 # Cluster name
-ECS_CLUSTER_NAME=cuspp-ecs-cluster
+ECS_CLUSTER_NAME=dodgame-ecs-cluster
 # Name of EC2 Key Pair
-EC2_KEY_PAIR=cussp-dev
+EC2_KEY_PAIR=dodgame-dev
 # Lets update this when services are added to the cluster/elb - should be 3, one in each AZ
 NUM_NODES=0
 WAIT_ACTION=
@@ -26,6 +26,7 @@ validate() {
 # first create the stack specifying the template file and the necessary IAM capabilities
 create() {
 
+    aws --profile ${TARGET_PROFILE} ecs create-cluster --cluster-name ${ECS_CLUSTER_NAME}
     #capture the latest Amazon ECS optimized AMI id
     IMAGE_ID=$(aws --profile ${TARGET_PROFILE} ec2 describe-images --owners amazon --filters Name=name,Values='amzn-ami-*-amazon-ecs-optimized' --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text)
 
@@ -36,10 +37,10 @@ create() {
     --parameters \
     ParameterKey=NetworkStack,ParameterValue=${NETWORK_STACK_NAME} \
     ParameterKey=IntranetStack,ParameterValue=${INTRANET_STACK_NAME} \
-    ParameterKey=AMI,ParameterValue=${IMAGE_ID} \
-    ParameterKey=KeyName,ParameterValue=${EC2_KEY_PAIR} \
     ParameterKey=NumNodes,ParameterValue=${NUM_NODES} \
     ParameterKey=ClusterName,ParameterValue=${ECS_CLUSTER_NAME}
+#    ParameterKey=AMI,ParameterValue=${IMAGE_ID} \
+#    ParameterKey=KeyName,ParameterValue=${EC2_KEY_PAIR} \
 }
 
 # update the stack

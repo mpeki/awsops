@@ -6,16 +6,16 @@
 TARGET_PROFILE=dev
 WAIT_ACTION=
 # Stack name for load balancer
-ELB_STACK_NAME=CuSSP-internet-service-elb
+ELB_STACK_NAME=DoDGame-internet-service-elb
 # Stack name of our network setup
-NETWORK_STACK_NAME=CuSSP-network
+NETWORK_STACK_NAME=DoDGame-network
 # Name of our Application Load Balancer
 ELB_NAME=api-lb
 # Name of Bucker for access logs
 LOG_BUCKET_NAME=
 
 init(){
-    if [ -z ${LOG_BUCKET_NAME} ]; then LOG_BUCKET_NAME=cussp-${TARGET_PROFILE,,}-logs; fi
+    if [ -z ${LOG_BUCKET_NAME} ]; then LOG_BUCKET_NAME=dodgame-${TARGET_PROFILE,,}-logs; fi
 }
 
 # validate the template

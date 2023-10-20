@@ -26,43 +26,8 @@ Resources:
         - Effect: "Allow"
           Action: "s3:GetObject"
           Principal:
-            AWS: "arn:aws:iam::281283362525:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "dev", "/*"]]
-
-        # Demo account
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::311542012115:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "demo", "/*"]]
-
-        # SBHDemo account
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::485853774387:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "sbhdemo", "/*"]]
-
-        # SBHTest account
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::895076489986:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "sbhtest", "/*"]]
-
-        # M1 account
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::676835235756:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "m1", "/*"]]
-
-        # rnddev account
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::515257242789:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "rnddev", "/*"]]
+            AWS: "arn:aws:iam::481519101038:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "/", "dodgame-dev", "/*"]]
 
   BucketPolicyForConfigs:
     Type: "AWS::S3::BucketPolicy"
@@ -77,7 +42,7 @@ Resources:
         - Effect: "Allow"
           Action: "s3:ListBucket"
           Principal:
-            AWS: "arn:aws:iam::281283362525:root"
+            AWS: "arn:aws:iam::481519101038:root"
           Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
           Condition:
             StringLike:
@@ -85,83 +50,8 @@ Resources:
         - Effect: "Allow"
           Action: "s3:GetObject"
           Principal:
-            AWS: "arn:aws:iam::281283362525:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "dev", "/*"]]
-
-        # Demo account
-        - Effect: "Allow"
-          Action: "s3:ListBucket"
-          Principal:
-            AWS: "arn:aws:iam::311542012115:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
-          Condition:
-            StringLike:
-              s3:prefix: "demo/*"
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::311542012115:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "demo", "/*"]]
-
-        # SBHDemo account
-        - Effect: "Allow"
-          Action: "s3:ListBucket"
-          Principal:
-            AWS: "arn:aws:iam::485853774387:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
-          Condition:
-            StringLike:
-              s3:prefix: "sbhdemo/*"
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::485853774387:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "sbhdemo", "/*"]]
-
-        # SBHTest account
-        - Effect: "Allow"
-          Action: "s3:ListBucket"
-          Principal:
-            AWS: "arn:aws:iam::895076489986:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
-          Condition:
-            StringLike:
-              s3:prefix: "sbhtest/*"
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::895076489986:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "sbhtest", "/*"]]
-
-        # M1 account
-        - Effect: "Allow"
-          Action: "s3:ListBucket"
-          Principal:
-            AWS: "arn:aws:iam::676835235756:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
-          Condition:
-            StringLike:
-              s3:prefix: "m1/*"
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::676835235756:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "m1", "/*"]]
-
-        # rnddev account
-        - Effect: "Allow"
-          Action: "s3:ListBucket"
-          Principal:
-            AWS: "arn:aws:iam::515257242789:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs"]]
-          Condition:
-            StringLike:
-              s3:prefix: "rnddev/*"
-        - Effect: "Allow"
-          Action: "s3:GetObject"
-          Principal:
-            AWS: "arn:aws:iam::515257242789:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "rnddev", "/*"]]
+            AWS: "arn:aws:iam::481519101038:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-configs/", "dodgame-dev", "/*"]]
 
   BucketPolicyForBackups:
     Type: "AWS::S3::BucketPolicy"
@@ -176,40 +66,5 @@ Resources:
         - Effect: "Allow"
           Action: "s3:PutObject"
           Principal:
-            AWS: "arn:aws:iam::281283362525:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "dev", "/*"]]
-
-        # Demo account
-        - Effect: "Allow"
-          Action: "s3:PutObject"
-          Principal:
-            AWS: "arn:aws:iam::311542012115:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "demo", "/*"]]
-
-        # SBHDemo account
-        - Effect: "Allow"
-          Action: "s3:PutObject"
-          Principal:
-            AWS: "arn:aws:iam::485853774387:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "sbhdemo", "/*"]]
-
-        # SBHTest account
-        - Effect: "Allow"
-          Action: "s3:PutObject"
-          Principal:
-            AWS: "arn:aws:iam::895076489986:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "sbhtest", "/*"]]
-
-        # M1 account
-        - Effect: "Allow"
-          Action: "s3:PutObject"
-          Principal:
-            AWS: "arn:aws:iam::676835235756:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "m1", "/*"]]
-
-        # rnddev account
-        - Effect: "Allow"
-          Action: "s3:PutObject"
-          Principal:
-            AWS: "arn:aws:iam::515257242789:root"
-          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "rnddev", "/*"]]
+            AWS: "arn:aws:iam::481519101038:root"
+          Resource: !Join [ "", ["arn:aws:s3:::", !Ref BucketName, "-backups/", "dodgame-dev", "/*"]]
